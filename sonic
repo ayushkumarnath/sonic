@@ -12,6 +12,7 @@ cleanup() {
 }
 trap cleanup SIGINT
 
+ESC=$'\033'
 MAX_SONG_TITLE_LEN=50
 loop_enabled=0
 pf_enabled=0
@@ -56,11 +57,13 @@ get_song_title() {
 
 print_song_title() {
   local len_song_title=${#song_title}
-  printf "\r%-${COLUMNS}s" " "
-  printf "\rNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
+  printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
   if ((len_song_title > MAX_SONG_TITLE_LEN)); then
     printf "..."
   fi
+
+  # Save cursor position
+  printf "${ESC}[s"
 }
 
 init_audio_engine() {
@@ -75,11 +78,17 @@ init_audio_engine() {
 pause_n_play() {
   if [[ $is_paused -eq 0 ]]; then
     kill -STOP "$pid"
-    printf "\r[Paused] Now playing: %-60s" "${song##*/}"
+
+    # Restore cursor position and print " (Paused)"
+    printf "${ESC}[u (Paused)"
+
     is_paused=1
   else
     kill -CONT "$pid"
-    printf "\rNow playing: %-60s" "${song##*/}"
+
+    # Restore cursor position and clear text
+    printf "${ESC}[u${ESC}[K"
+
     is_paused=0
   fi
 }
