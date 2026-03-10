@@ -154,6 +154,13 @@ while [[ $# -gt 0 ]]; do
 
 done
 
+# ===== dependency check ===== #
+if ! command -v ffplay >/dev/null 2>&1; then
+  printf "Error: ffplay is not installed\n"
+  printf "Please install ffmpeg to use this music player\n"
+  exit 1
+fi
+
 # ===== arg validation ===== #
 if [[ -z "$file" && -z "$folder" ]]; then
   print_error "no file or folder has been provided"
