@@ -51,7 +51,7 @@ print_help() {
 
 init_audio_engine() {
   local song="$1"
-  printf "\rCurrently playing: %-60s" "${song##*/}"
+  printf "\rNow playing: %-60s" "${song##*/}"
 
   ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
   pid=$!
@@ -60,11 +60,11 @@ init_audio_engine() {
 pause_n_play() {
   if [[ $is_paused -eq 0 ]]; then
     kill -STOP "$pid"
-    printf "\r[Paused] Currently playing: %-60s" "${song##*/}"
+    printf "\r[Paused] Now playing: %-60s" "${song##*/}"
     is_paused=1
   else
     kill -CONT "$pid"
-    printf "\rCurrently playing: %-60s" "${song##*/}"
+    printf "\rNow playing: %-60s" "${song##*/}"
     is_paused=0
   fi
 }
