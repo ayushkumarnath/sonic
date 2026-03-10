@@ -12,6 +12,7 @@ cleanup() {
 }
 trap cleanup SIGINT
 
+MAX_SONG_TITLE_LEN=50
 loop_enabled=0
 pf_enabled=0
 file=""
@@ -49,9 +50,23 @@ print_help() {
   printf "\t%-1s %s\n" "q" "Quit"
 }
 
+get_song_title() {
+  song_title="${song##*/}"
+}
+
+print_song_title() {
+  local len_song_title=${#song_title}
+  printf "\r%-${COLUMNS}s" " "
+  printf "\rNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
+  if ((len_song_title > MAX_SONG_TITLE_LEN)); then
+    printf "..."
+  fi
+}
+
 init_audio_engine() {
   local song="$1"
-  printf "\rNow playing: %-60s" "${song##*/}"
+  get_song_title
+  print_song_title
 
   ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
   pid=$!
