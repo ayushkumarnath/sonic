@@ -133,6 +133,14 @@ add_key_listener() {
   done
 }
 
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf "Error: dependency '%s' not found\n" "$1" >&2
+    printf "Please install the required dependencies\n\n" >&2
+    exit 1
+  fi
+}
+
 # ===== arg parsing ===== #
 while [[ $# -gt 0 ]]; do
 
@@ -179,11 +187,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ===== dependency check ===== #
-if ! command -v ffplay >/dev/null 2>&1; then
-  printf "Error: ffplay is not installed\n"
-  printf "Please install ffmpeg to use this music player\n"
-  exit 1
-fi
+deps=("ffplay")
+for dep in "${deps[@]}"; do
+  require "$dep"
+done
 
 # ===== arg validation ===== #
 if [[ -z "$file" && -z "$folder" ]]; then
