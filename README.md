@@ -1,5 +1,7 @@
 # SONIC - Terminal Music Player
 
+## About
+
 Sonic is a ffplay wrapper software written in bash
 
 ## Installation
