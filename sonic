@@ -21,6 +21,10 @@ folder=""
 key=""
 is_paused=0
 
+# Colors
+RED='\033[0;31m'
+RESET='\033[0m'
+
 print_error() {
   printf "Error: %s\n" "$1"
   printf "See --help for more info\n"
@@ -193,7 +197,7 @@ done
 
 if [[ ${#missing_deps[@]} -ne 0 ]]; then
   for dep in "${missing_deps[@]}"; do
-    printf "Error: dependency '%s' not found\n" "$dep" >&2
+    printf "${RED}Error:${RESET} dependency '%s' not found\n" "$dep" >&2
   done
   printf "Please install the required dependencies\n\n" >&2
   exit 1

@@ -6,6 +6,10 @@ TARGET_DIR="$HOME/.local/bin/custom"
 SHELL_CONFIG_NAME=".bashrc"
 SHELL_CONFIG="$HOME/$SHELL_CONFIG_NAME"
 
+# Colors
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
 printf "Creating target directory..."
 
 mkdir -p "$TARGET_DIR"
@@ -53,9 +57,7 @@ are_deps_ok=0
 
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
-    printf "\nWarning: dependency '%s' not found\n" "$1" >&2
-    printf "Please install the required dependencies\n\n" >&2
-
+    missing_deps+=("$1")
     are_deps_ok=1
   fi
 }
@@ -66,6 +68,14 @@ deps=("ffplay")
 for dep in "${deps[@]}"; do
   require "$dep"
 done
+
+if [[ ${#missing_deps[@]} -ne 0 ]]; then
+  printf "\n"
+  for dep in "${missing_deps[@]}"; do
+    printf "${YELLOW}Warning:${RESET} dependency '%s' not found\n" "$dep" >&2
+  done
+  printf "Please install the required dependencies\n\n" >&2
+fi
 
 if [[ $are_deps_ok -eq 0 ]]; then
   printf "done\n\n"
