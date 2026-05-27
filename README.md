@@ -26,6 +26,6 @@ chmod +x ./install.sh
 ./install.sh
 ```
 
-Now you can invoke the ytd script from anywhere
+Now you can invoke the `sonic` script from anywhere
 
 Note: This script is exclusively for Linux only.
