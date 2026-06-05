@@ -12,14 +12,16 @@ cleanup() {
 }
 trap cleanup SIGINT
 
-ESC=$'\033'
+readonly TRUE=1
+readonly FALSE=0
+readonly ESC=$'\033'
 MAX_SONG_TITLE_LEN=50
 loop_enabled=0
 pf_enabled=0
 file=""
 folder=""
 key=""
-is_paused=0
+is_paused=$FALSE
 
 # Colors
 RED='\033[0;31m'
@@ -80,20 +82,20 @@ init_audio_engine() {
 }
 
 pause_n_play() {
-  if [[ $is_paused -eq 0 ]]; then
+  if [[ $is_paused -eq $FALSE ]]; then
     kill -STOP "$pid"
 
     # Restore cursor position and print " (Paused)"
     printf "${ESC}[u (Paused)"
 
-    is_paused=1
+    is_paused=$TRUE
   else
     kill -CONT "$pid"
 
     # Restore cursor position and clear text
     printf "${ESC}[u${ESC}[K"
 
-    is_paused=0
+    is_paused=$FALSE
   fi
 }
 
@@ -258,7 +260,7 @@ if ((loop_enabled)); then
   i=0
   while true; do
     song="${playlist[i]}"
-    is_paused=0
+    is_paused=$FALSE
 
     init_audio_engine "$song"
 
@@ -280,7 +282,7 @@ else
   for ((i = 0; i >= 0 && i < len_playlist; )); do
 
     song="${playlist[i]}"
-    is_paused=0
+    is_paused=$FALSE
 
     init_audio_engine "$song"
 
