@@ -1,17 +1,5 @@
 #!/usr/bin/bash
 
-cleanup() {
-  printf "\nInterrupted. Exiting...\n"
-  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-    kill -CONT "$pid"
-    sleep 0.2
-    kill "$pid" 2>/dev/null
-    wait "$pid" 2>/dev/null
-  fi
-  exit 0
-}
-trap cleanup SIGINT
-
 readonly TRUE=1
 readonly FALSE=0
 readonly ESC=$'\033'
@@ -27,6 +15,20 @@ is_paused=$FALSE
 RED='\033[0;31m'
 RESET='\033[0m'
 
+# ===== CLEANUP ===== #
+cleanup() {
+  printf "\nInterrupted. Exiting...\n"
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    kill -CONT "$pid"
+    sleep 0.2
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+  fi
+  exit 0
+}
+trap cleanup SIGINT
+
+# ===== UTILITY FUNCTIONS ===== #
 print_error() {
   printf "Error: %s\n" "$1"
   printf "See --help for more info\n"
@@ -72,6 +74,7 @@ print_song_title() {
   printf "${ESC}[s"
 }
 
+# ===== MEDIA PLAYER ===== #
 init_audio_engine() {
   local song="$1"
   get_song_title
@@ -115,6 +118,7 @@ play_before() {
   fi
 }
 
+# ===== EVENT ===== #
 add_key_listener() {
   while kill -0 "$pid" 2>/dev/null; do
 
@@ -137,12 +141,6 @@ add_key_listener() {
     fi
 
   done
-}
-
-require() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    missing_deps+=("$1")
-  fi
 }
 
 # ===== arg parsing ===== #
@@ -191,6 +189,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ===== dependency check ===== #
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    missing_deps+=("$1")
+  fi
+}
+
 deps=("ffplay")
 missing_deps=()
 for dep in "${deps[@]}"; do
