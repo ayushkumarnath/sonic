@@ -136,7 +136,7 @@ toggle_pause() {
   fi
 }
 
-play_next_song() {
+select_next_song() {
   if ((loop_enabled)); then
     i=$(((i + 1) % len_playlist))
   else
@@ -144,7 +144,7 @@ play_next_song() {
   fi
 }
 
-play_previous_song() {
+select_previous_song() {
   if ((loop_enabled)); then
     i=$(((i - 1 + len_playlist) % len_playlist))
   else
@@ -161,27 +161,19 @@ cleanup() {
 trap cleanup SIGINT
 
 # ===== EVENT ===== #
-add_key_listener() {
+handle_playback_input() {
   while kill -0 "$pid" 2>/dev/null; do
-
     key=""
     read -rsn1 -t 0.1 key
 
-    if [[ $key == "p" ]]; then
-      toggle_pause
-
-    elif [[ $key == "n" ]]; then
-      play_next_song
-      break
-
-    elif [[ $key == "b" ]]; then
-      play_previous_song
-      break
-
-    elif [[ $key == "q" ]]; then
-      cleanup
-    fi
-
+    case "$key" in
+      p)
+        toggle_pause
+        ;;
+      n | b | q)
+        break
+        ;;
+    esac
   done
 }
 
@@ -304,7 +296,19 @@ if ((loop_enabled)); then
 
     start_playback "$song"
 
-    add_key_listener
+    handle_playback_input
+
+    case "$key" in
+      n)
+        select_next_song
+        ;;
+      b)
+        select_previous_song
+        ;;
+      q)
+        cleanup
+        ;;
+    esac
 
     finish_current_playback
 
@@ -312,7 +316,6 @@ if ((loop_enabled)); then
       i=$(((i + 1) % len_playlist))
     fi
   done
-
 else
   for ((i = 0; i >= 0 && i < len_playlist; )); do
 
@@ -321,13 +324,24 @@ else
 
     start_playback "$song"
 
-    add_key_listener
+    handle_playback_input
+
+    case "$key" in
+      n)
+        select_next_song
+        ;;
+      b)
+        select_previous_song
+        ;;
+      q)
+        cleanup
+        ;;
+    esac
 
     finish_current_playback
 
     if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
       ((i++))
     fi
-
   done
 fi
