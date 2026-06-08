@@ -66,12 +66,6 @@ clear_song_title() {
   printf "\r${ESC}[K"
 }
 
-require() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    missing_deps+=("$1")
-  fi
-}
-
 # ===== MEDIA PLAYER ===== #
 start_ffplay() {
   # params: song, pos?
@@ -137,6 +131,8 @@ toggle_pause() {
 }
 
 select_next_song() {
+  local len_playlist=${#playlist[@]}
+
   if ((loop_enabled)); then
     i=$(((i + 1) % len_playlist))
   else
@@ -145,6 +141,8 @@ select_next_song() {
 }
 
 select_previous_song() {
+  local len_playlist=${#playlist[@]}
+
   if ((loop_enabled)); then
     i=$(((i - 1 + len_playlist) % len_playlist))
   else
@@ -152,7 +150,7 @@ select_previous_song() {
   fi
 }
 
-# ===== CLEANUP ===== #
+# ===== EXIT HANDLING ===== #
 cleanup() {
   stop_playback
   printf "Interrupted. Exiting...\n"
@@ -160,7 +158,7 @@ cleanup() {
 }
 trap cleanup SIGINT
 
-# ===== EVENT ===== #
+# ===== EVENT HANDLING ===== #
 handle_playback_input() {
   while kill -0 "$pid" 2>/dev/null; do
     key=""
@@ -177,117 +175,23 @@ handle_playback_input() {
   done
 }
 
-# ===== arg parsing ===== #
-while [[ $# -gt 0 ]]; do
-
-  case "$1" in
-
-  "-h" | "--help")
-    print_help
-    exit 0
-    ;;
-
-  "-lp" | "--loop")
-    loop_enabled=1
-    shift
-    ;;
-
-  "-pf" | "--play-folder")
-    if [[ -z "$2" ]]; then
-      print_error "'$1' requires a folder"
-      exit 1
-    fi
-
-    play_folder_enabled=1
-    folder="${2%/}"
-    shift 2
-    ;;
-
-  -*)
-    print_error "unknown option '$1'"
-    exit 1
-    ;;
-
-  *)
-    if [[ -n "$file" ]]; then
-      print_error "cannot play multiple files"
-      exit 1
-    fi
-
-    file="$1"
-    shift
-    ;;
-
+process_playback_key() {
+  case "$key" in
+    n)
+      select_next_song
+      ;;
+    b)
+      select_previous_song
+      ;;
+    q)
+      cleanup
+      ;;
   esac
+}
 
-done
-
-# ===== dependency check ===== #
-deps=("ffplay")
-missing_deps=()
-for dep in "${deps[@]}"; do
-  require "$dep"
-done
-
-if [[ ${#missing_deps[@]} -ne 0 ]]; then
-  for dep in "${missing_deps[@]}"; do
-    printf "${RED}Error:${RESET} dependency '%s' not found\n" "$dep" >&2
-  done
-  printf "Please install the required dependencies\n\n" >&2
-  exit 1
-fi
-
-# ===== arg validation ===== #
-if [[ -z "$file" && -z "$folder" ]]; then
-  print_error "no file or folder has been provided"
-  exit 1
-fi
-
-if [[ -n "$file" && -n "$folder" ]]; then
-  print_error "cannot play file and folder together"
-  exit 1
-fi
-
-if [[ -n "$file" && ! -f "$file" ]]; then
-  print_error "invalid file"
-  exit 1
-fi
-
-if [[ -n "$folder" && ! -d "$folder" ]]; then
-  print_error "invalid folder"
-  exit 1
-fi
-
-# ===== build playlist ===== #
-playlist=()
-
-if ((play_folder_enabled)); then
-  for f in "$folder"/*; do
-    if [[ -f "$f" && "${f,,}" == *.mp3 ]]; then
-      playlist+=("$f")
-    fi
-  done
-
-  if [[ ${#playlist[@]} -eq 0 ]]; then
-    printf "Only mp3 files are supported\n"
-    printf "'$folder' has no mp3 files\n"
-    exit 1
-  fi
-
-else
-  if [[ "${file,,}" != *.mp3 ]]; then
-    printf "Error: only mp3 files are supported\n"
-    exit 1
-  fi
-
-  playlist+=("$file")
-fi
-
-# ===== playback logic ===== #
-len_playlist=${#playlist[@]}
-
-if ((loop_enabled)); then
-  printf "Looping enabled\n"
+# ===== PLAYBACK LOGIC ===== #
+run_playback_loop() {
+  local len_playlist=${#playlist[@]}
 
   i=0
   while true; do
@@ -298,50 +202,158 @@ if ((loop_enabled)); then
 
     handle_playback_input
 
-    case "$key" in
-      n)
-        select_next_song
-        ;;
-      b)
-        select_previous_song
-        ;;
-      q)
-        cleanup
-        ;;
-    esac
+    process_playback_key
 
     finish_current_playback
 
     if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
-      i=$(((i + 1) % len_playlist))
+      select_next_song
+    fi
+
+    if [[ $i -lt 0 || $i -ge $len_playlist ]] && ! ((loop_enabled)); then
+      break
     fi
   done
-else
-  for ((i = 0; i >= 0 && i < len_playlist; )); do
+}
 
-    song="${playlist[i]}"
-    is_paused=$FALSE
+run_player() {
+  if ((loop_enabled)); then
+    printf "Looping enabled\n"
+  fi
 
-    start_playback "$song"
+  run_playback_loop
+}
 
-    handle_playback_input
+# ===== ARGUMENT PARSING ===== #
+parse_arguments() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    "-h" | "--help")
+      print_help
+      exit 0
+      ;;
 
-    case "$key" in
-      n)
-        select_next_song
-        ;;
-      b)
-        select_previous_song
-        ;;
-      q)
-        cleanup
-        ;;
+    "-lp" | "--loop")
+      loop_enabled=$TRUE
+      shift
+      ;;
+
+    "-pf" | "--play-folder")
+      if [[ -z "$2" ]]; then
+        print_error "'$1' requires a folder"
+        exit 1
+      fi
+
+      play_folder_enabled=$TRUE
+      folder="${2%/}"
+      shift 2
+      ;;
+
+    -*)
+      print_error "unknown option '$1'"
+      exit 1
+      ;;
+
+    *)
+      if [[ -n "$file" ]]; then
+        print_error "cannot play multiple files"
+        exit 1
+      fi
+
+      file="$1"
+      shift
+      ;;
     esac
-
-    finish_current_playback
-
-    if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
-      ((i++))
-    fi
   done
-fi
+}
+
+# ===== DEPENDENCY CHECK ===== #
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    missing_deps+=("$1")
+  fi
+}
+
+check_dependencies() {
+  missing_deps=()
+
+  local deps=("ffplay")
+  local dep
+
+  for dep in "${deps[@]}"; do
+    require "$dep"
+  done
+
+  if [[ ${#missing_deps[@]} -ne 0 ]]; then
+    for dep in "${missing_deps[@]}"; do
+      printf "${RED}Error:${RESET} dependency '%s' not found\n" "$dep" >&2
+    done
+    printf "Please install the required dependencies\n\n" >&2
+    exit 1
+  fi
+}
+
+# ===== ARGUMENT VALIDATION ===== #
+validate_arguments() {
+  if [[ -z "$file" && -z "$folder" ]]; then
+    print_error "no file or folder has been provided"
+    exit 1
+  fi
+
+  if [[ -n "$file" && -n "$folder" ]]; then
+    print_error "cannot play file and folder together"
+    exit 1
+  fi
+
+  if [[ -n "$file" && ! -f "$file" ]]; then
+    print_error "invalid file"
+    exit 1
+  fi
+
+  if [[ -n "$folder" && ! -d "$folder" ]]; then
+    print_error "invalid folder"
+    exit 1
+  fi
+}
+
+# ===== BUILD PLAYLIST ===== #
+build_playlist() {
+  playlist=()
+
+  local f
+
+  if ((play_folder_enabled)); then
+    for f in "$folder"/*; do
+      if [[ -f "$f" && "${f,,}" == *.mp3 ]]; then
+        playlist+=("$f")
+      fi
+    done
+
+    if [[ ${#playlist[@]} -eq 0 ]]; then
+      printf "Only mp3 files are supported\n"
+      printf "'$folder' has no mp3 files\n"
+      exit 1
+    fi
+  else
+    if [[ "${file,,}" != *.mp3 ]]; then
+      printf "Error: only mp3 files are supported\n"
+      exit 1
+    fi
+
+    playlist+=("$file")
+  fi
+}
+
+# ===== MAIN ===== #
+main() {
+  parse_arguments "$@"
+  check_dependencies
+  validate_arguments
+  build_playlist
+  run_player
+
+  return 0
+}
+
+# ===== PROGRAM STARTS ===== #
+main "$@"
