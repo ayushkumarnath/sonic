@@ -47,6 +47,9 @@ print_help() {
 }
 
 print_song_title() {
+  # params: song
+  local song="$1"
+
   local song_title="${song##*/}"
   local len_song_title=${#song_title}
 
@@ -98,7 +101,7 @@ start_playback() {
   local song="$1"
 
   start_ffplay "$song"
-  print_song_title
+  print_song_title "$song"
 }
 
 stop_playback() {
@@ -219,7 +222,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ===== dependency check ===== #
-
 deps=("ffplay")
 missing_deps=()
 for dep in "${deps[@]}"; do
