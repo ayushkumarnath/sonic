@@ -96,6 +96,15 @@ stop_ffplay() {
   fi
 }
 
+finish_current_playback() {
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -CONT "$pid"
+    sleep 0.2
+    kill "$pid" 2>/dev/null
+  fi
+  wait "$pid" 2>/dev/null
+}
+
 start_playback() {
   # params: song
   local song="$1"
@@ -297,12 +306,7 @@ if ((loop_enabled)); then
 
     add_key_listener
 
-    if kill -0 "$pid" 2>/dev/null; then
-      kill -CONT "$pid"
-      sleep 0.2
-      kill "$pid" 2>/dev/null
-    fi
-    wait "$pid" 2>/dev/null
+    finish_current_playback
 
     if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
       i=$(((i + 1) % len_playlist))
@@ -319,12 +323,7 @@ else
 
     add_key_listener
 
-    if kill -0 "$pid" 2>/dev/null; then
-      kill -CONT "$pid"
-      sleep 0.2
-      kill "$pid" 2>/dev/null
-    fi
-    wait "$pid" 2>/dev/null
+    finish_current_playback
 
     if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
       ((i++))
