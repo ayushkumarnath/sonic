@@ -5,7 +5,7 @@ readonly FALSE=0
 readonly ESC=$'\033'
 MAX_SONG_TITLE_LEN=50
 loop_enabled=0
-pf_enabled=0
+play_folder_enabled=0
 file=""
 folder=""
 key=""
@@ -49,6 +49,7 @@ print_help() {
 print_song_title() {
   local song_title="${song##*/}"
   local len_song_title=${#song_title}
+
   printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
   if ((len_song_title > MAX_SONG_TITLE_LEN)); then
     printf "..."
@@ -60,6 +61,12 @@ print_song_title() {
 
 clear_song_title() {
   printf "\r${ESC}[K"
+}
+
+require() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    missing_deps+=("$1")
+  fi
 }
 
 # ===== MEDIA PLAYER ===== #
@@ -99,7 +106,7 @@ stop_playback() {
   clear_song_title
 }
 
-pause_n_play() {
+toggle_pause() {
   if [[ $is_paused -eq $FALSE ]]; then
     kill -STOP "$pid"
 
@@ -149,7 +156,7 @@ add_key_listener() {
     read -rsn1 -t 0.1 key
 
     if [[ $key == "p" ]]; then
-      pause_n_play
+      toggle_pause
 
     elif [[ $key == "n" ]]; then
       play_next_song
@@ -187,7 +194,7 @@ while [[ $# -gt 0 ]]; do
       exit 1
     fi
 
-    pf_enabled=1
+    play_folder_enabled=1
     folder="${2%/}"
     shift 2
     ;;
@@ -212,11 +219,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ===== dependency check ===== #
-require() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    missing_deps+=("$1")
-  fi
-}
 
 deps=("ffplay")
 missing_deps=()
@@ -256,7 +258,7 @@ fi
 # ===== build playlist ===== #
 playlist=()
 
-if ((pf_enabled)); then
+if ((play_folder_enabled)); then
   for f in "$folder"/*; do
     if [[ -f "$f" && "${f,,}" == *.mp3 ]]; then
       playlist+=("$f")
