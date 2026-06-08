@@ -26,16 +26,16 @@ print_help() {
 
   printf "Usage:\n"
   printf "\tsonic <file>\n"
-  printf "\tsonic -pf <folder>\n"
-  printf "\tsonic <file> [-lp]\n"
-  printf "\tsonic -pf <folder> [-lp]\n"
+  printf "\tsonic -f <folder>\n"
+  printf "\tsonic <file> [-l]\n"
+  printf "\tsonic -f <folder> [-l]\n"
 
   printf "\n"
 
   printf "Options:\n"
   printf "\t%-24s %s\n" "-h, --help" "Show help"
-  printf "\t%-24s %s\n" "-lp, --loop" "Loop song or playlist"
-  printf "\t%-24s %s\n" "-pf, --play-folder" "Play songs from the specified folder"
+  printf "\t%-24s %s\n" "-l, --loop" "Loop song or playlist"
+  printf "\t%-24s %s\n" "-f, --play-folder" "Play songs from the specified folder"
 
   printf "\n"
 
@@ -238,12 +238,12 @@ parse_arguments() {
       exit 0
       ;;
 
-    "-lp" | "--loop")
+    "-l" | "--loop")
       loop_enabled=$TRUE
       shift
       ;;
 
-    "-pf" | "--play-folder")
+    "-f" | "--play-folder")
       if [[ -z "$2" ]]; then
         print_error "'$1' requires a folder"
         exit 1
