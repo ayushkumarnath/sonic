@@ -226,6 +226,11 @@ run_player() {
 
 # ===== ARGUMENT PARSING ===== #
 parse_arguments() {
+  if [[ $# -eq 0 ]]; then
+    print_help
+    exit 0
+  fi
+
   while [[ $# -gt 0 ]]; do
     case "$1" in
     "-h" | "--help")
@@ -295,11 +300,6 @@ check_dependencies() {
 
 # ===== ARGUMENT VALIDATION ===== #
 validate_arguments() {
-  if [[ -z "$file" && -z "$folder" ]]; then
-    print_error "no file or folder has been provided"
-    exit 1
-  fi
-
   if [[ -n "$file" && -n "$folder" ]]; then
     print_error "cannot play file and folder together"
     exit 1
