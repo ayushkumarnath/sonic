@@ -15,19 +15,6 @@ is_paused=$FALSE
 RED='\033[0;31m'
 RESET='\033[0m'
 
-# ===== CLEANUP ===== #
-cleanup() {
-  printf "\nInterrupted. Exiting...\n"
-  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-    kill -CONT "$pid"
-    sleep 0.2
-    kill "$pid" 2>/dev/null
-    wait "$pid" 2>/dev/null
-  fi
-  exit 0
-}
-trap cleanup SIGINT
-
 # ===== UTILITY FUNCTIONS ===== #
 print_error() {
   printf "Error: %s\n" "$1"
@@ -59,11 +46,8 @@ print_help() {
   printf "\t%-1s %s\n" "q" "Quit"
 }
 
-get_song_title() {
-  song_title="${song##*/}"
-}
-
 print_song_title() {
+  local song_title="${song##*/}"
   local len_song_title=${#song_title}
   printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
   if ((len_song_title > MAX_SONG_TITLE_LEN)); then
@@ -74,14 +58,45 @@ print_song_title() {
   printf "${ESC}[s"
 }
 
-# ===== MEDIA PLAYER ===== #
-init_audio_engine() {
-  local song="$1"
-  get_song_title
-  print_song_title
+clear_song_title() {
+  printf "\r${ESC}[K"
+}
 
-  ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
+# ===== MEDIA PLAYER ===== #
+start_ffplay() {
+  # params: song, pos?
+  local song="$1"
+  local pos="$2"
+
+  if [[ -n $pos ]]; then
+    ffplay -nodisp -autoexit -nostats -hide_banner -ss "$pos" "$song" &
+  else
+    ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
+  fi
+
   pid=$!
+}
+
+stop_ffplay() {
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    kill -CONT "$pid"
+    sleep 0.2
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+  fi
+}
+
+start_playback() {
+  # params: song
+  local song="$1"
+
+  start_ffplay "$song"
+  print_song_title
+}
+
+stop_playback() {
+  stop_ffplay
+  clear_song_title
 }
 
 pause_n_play() {
@@ -102,7 +117,7 @@ pause_n_play() {
   fi
 }
 
-play_next() {
+play_next_song() {
   if ((loop_enabled)); then
     i=$(((i + 1) % len_playlist))
   else
@@ -110,13 +125,21 @@ play_next() {
   fi
 }
 
-play_before() {
+play_previous_song() {
   if ((loop_enabled)); then
     i=$(((i - 1 + len_playlist) % len_playlist))
   else
     ((i--))
   fi
 }
+
+# ===== CLEANUP ===== #
+cleanup() {
+  stop_playback
+  printf "Interrupted. Exiting...\n"
+  exit 0
+}
+trap cleanup SIGINT
 
 # ===== EVENT ===== #
 add_key_listener() {
@@ -129,11 +152,11 @@ add_key_listener() {
       pause_n_play
 
     elif [[ $key == "n" ]]; then
-      play_next
+      play_next_song
       break
 
     elif [[ $key == "b" ]]; then
-      play_before
+      play_previous_song
       break
 
     elif [[ $key == "q" ]]; then
@@ -266,7 +289,7 @@ if ((loop_enabled)); then
     song="${playlist[i]}"
     is_paused=$FALSE
 
-    init_audio_engine "$song"
+    start_playback "$song"
 
     add_key_listener
 
@@ -288,7 +311,7 @@ else
     song="${playlist[i]}"
     is_paused=$FALSE
 
-    init_audio_engine "$song"
+    start_playback "$song"
 
     add_key_listener
 
