@@ -18,8 +18,12 @@ play_folder_enabled=0
 is_paused=$FALSE
 
 # Media playback
+readonly SKIP_LENGTH=10
 file=""
 folder=""
+song=""
+song_start_time=0
+total_song_duration=0
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -66,6 +70,36 @@ print_version_info() {
   printf "SONIC v${VERSION}\n"
 }
 
+# ===== LOW LEVEL ===== #
+start_ffplay() {
+  # params: song, pos?
+  local song="$1"
+  local pos="$2"
+
+  if [[ -n $pos ]]; then
+    ffplay -nodisp -autoexit -nostats -hide_banner -ss "$pos" "$song" &
+  else
+    ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
+  fi
+
+  pid=$!
+}
+
+ffplay_exists() {
+  [[ -n "$1" ]] && kill -0 "$1" 2>/dev/null
+}
+
+stop_ffplay() {
+  if ffplay_exists "$pid"; then
+    kill -CONT "$pid"
+    sleep 0.2
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    pid=""
+  fi
+}
+
+# ===== MEDIA PLAYER ===== #
 print_song_title() {
   # params: song
   local song="$1"
@@ -82,41 +116,19 @@ print_song_title() {
   printf "${ESC}[s"
 }
 
-clear_song_title() {
-  printf "\r${ESC}[K"
-}
-
-# ===== MEDIA PLAYER ===== #
-start_ffplay() {
-  # params: song, pos?
-  local song="$1"
-  local pos="$2"
-
-  if [[ -n $pos ]]; then
-    ffplay -nodisp -autoexit -nostats -hide_banner -ss "$pos" "$song" &
-  else
-    ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
-  fi
-
-  pid=$!
-}
-
-stop_ffplay() {
-  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-    kill -CONT "$pid"
-    sleep 0.2
-    kill "$pid" 2>/dev/null
-    wait "$pid" 2>/dev/null
-  fi
-}
+# TODO: Figure out a way to clear the entire dump or leave it if solution becomes too complex
+# clear_song_title() {
+#   printf "\r${ESC}[K"
+# }
 
 finish_current_playback() {
-  if kill -0 "$pid" 2>/dev/null; then
+  if ffplay_exists "$pid"; then
     kill -CONT "$pid"
     sleep 0.2
     kill "$pid" 2>/dev/null
   fi
   wait "$pid" 2>/dev/null
+  pid=""
 }
 
 start_playback() {
@@ -134,24 +146,33 @@ start_playback() {
 
 stop_playback() {
   stop_ffplay
-  clear_song_title
+
+  # TODO: If implemented then uncomment otherwise delete
+  # clear_song_title
+}
+
+pause_playback() {
+  kill -STOP "$pid"
+  printf "${ESC}[u (Paused)"
+  is_paused=$TRUE
+}
+
+resume_playback() {
+  stop_playback
+  start_playback "$song" "$total_song_duration"
+  printf "${ESC}[u${ESC}[K"
+  is_paused=$FALSE
 }
 
 toggle_pause() {
-  if [[ $is_paused -eq $FALSE ]]; then
-    kill -STOP "$pid"
-
-    # Restore cursor position and print " (Paused)"
-    printf "${ESC}[u (Paused)"
-
-    is_paused=$TRUE
+  if ! (($is_paused)); then
+    pause_playback
+    local now=$(date +%s)
+    local song_duration=$(( now - song_start_time ))
+    (( total_song_duration += song_duration ))
   else
-    kill -CONT "$pid"
-
-    # Restore cursor position and clear text
-    printf "${ESC}[u${ESC}[K"
-
-    is_paused=$FALSE
+    resume_playback "$total_song_duration"
+    song_start_time=$(date +%s)
   fi
 }
 
@@ -175,23 +196,39 @@ select_previous_song() {
   fi
 }
 
+skip_forward() {
+  if ((is_paused)); then
+    (( total_song_duration += SKIP_LENGTH ))
+  else
+    local now=$(date +%s)
+    local song_duration=$(( now - song_start_time ))
+    (( total_song_duration += (song_duration + SKIP_LENGTH) ))
+    stop_playback
+    start_playback "$song" "$total_song_duration"
+    song_start_time=$(date +%s)
+  fi
+}
+
 # ===== EXIT HANDLING ===== #
 cleanup() {
   stop_playback
-  printf "Interrupted. Exiting...\n"
+  printf "\nInterrupted. Exiting...\n"
   exit 0
 }
 trap cleanup SIGINT
 
 # ===== EVENT HANDLING ===== #
 handle_playback_input() {
-  while kill -0 "$pid" 2>/dev/null; do
+  while ffplay_exists "$pid"; do
     key=""
     read -rsn1 -t 0.1 key
 
     case "$key" in
       $PAUSE_KEY)
         toggle_pause
+        ;;
+      $SKIP_FORWARD_KEY)
+        skip_forward
         ;;
       $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
         break
@@ -222,8 +259,10 @@ run_playback_loop() {
   while true; do
     song="${playlist[i]}"
     is_paused=$FALSE
+    total_song_duration=0
 
     start_playback "$song"
+    song_start_time=$(date +%s)
 
     handle_playback_input
 
