@@ -100,6 +100,20 @@ stop_ffplay() {
 }
 
 # ===== MEDIA PLAYER ===== #
+sync_playback_position() {
+  local now=$(date +%s)
+  local song_duration=$(( now - song_start_time ))
+  (( total_song_duration += song_duration ))
+}
+
+rewind_position() {
+  if [[ $total_song_duration -le $SKIP_LENGTH ]]; then
+    total_song_duration=0
+  else
+    (( total_song_duration -= SKIP_LENGTH ))
+  fi
+}
+
 print_song_title() {
   # params: song
   local song="$1"
@@ -167,11 +181,9 @@ resume_playback() {
 toggle_pause() {
   if ! (($is_paused)); then
     pause_playback
-    local now=$(date +%s)
-    local song_duration=$(( now - song_start_time ))
-    (( total_song_duration += song_duration ))
+    sync_playback_position
   else
-    resume_playback "$total_song_duration"
+    resume_playback
     song_start_time=$(date +%s)
   fi
 }
@@ -200,10 +212,21 @@ skip_forward() {
   if ((is_paused)); then
     (( total_song_duration += SKIP_LENGTH ))
   else
-    local now=$(date +%s)
-    local song_duration=$(( now - song_start_time ))
-    (( total_song_duration += (song_duration + SKIP_LENGTH) ))
+    sync_playback_position
+    (( total_song_duration += SKIP_LENGTH ))
     stop_playback
+    start_playback "$song" "$total_song_duration"
+    song_start_time=$(date +%s)
+  fi
+}
+
+skip_backward() {
+  if ((is_paused)); then
+    rewind_position
+  else
+    sync_playback_position
+    stop_playback
+    rewind_position
     start_playback "$song" "$total_song_duration"
     song_start_time=$(date +%s)
   fi
@@ -229,6 +252,9 @@ handle_playback_input() {
         ;;
       $SKIP_FORWARD_KEY)
         skip_forward
+        ;;
+      $SKIP_BACKWARD_KEY)
+        skip_backward
         ;;
       $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
         break
