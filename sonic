@@ -107,10 +107,15 @@ finish_current_playback() {
 }
 
 start_playback() {
-  # params: song
+  # params: song, pos?
   local song="$1"
+  local pos="$2"
 
-  start_ffplay "$song"
+  if [[ -n $pos ]]; then
+    start_ffplay "$song" "$pos"
+  else
+    start_ffplay "$song"
+  fi
   print_song_title "$song"
 }
 
