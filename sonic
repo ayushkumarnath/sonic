@@ -1,19 +1,26 @@
 #!/usr/bin/bash
 
+# Global constants
 readonly TRUE=1
 readonly FALSE=0
 readonly ESC=$'\033'
-MAX_SONG_TITLE_LEN=50
-loop_enabled=0
-play_folder_enabled=0
-file=""
-folder=""
-key=""
-is_paused=$FALSE
+readonly RESET='\033[0m'
 
 # Colors
-RED='\033[0;31m'
-RESET='\033[0m'
+readonly RED='\033[0;31m'
+
+# Configuration states
+readonly MAX_SONG_TITLE_LEN=50
+loop_enabled=0
+play_folder_enabled=0
+is_paused=$FALSE
+
+# Media playback
+file=""
+folder=""
+
+# Playback control key
+key=""
 
 # ===== UTILITY FUNCTIONS ===== #
 print_error() {
