@@ -19,7 +19,13 @@ is_paused=$FALSE
 file=""
 folder=""
 
-# Playback control key
+# Playback control keys
+readonly PAUSE_KEY="k"
+readonly NEXT_SONG_KEY="n"
+readonly PREVIOUS_SONG_KEY="p"
+readonly SKIP_FORWARD_KEY="l"
+readonly SKIP_BACKWARD_KEY="j"
+readonly QUIT_KEY="q"
 key=""
 
 # ===== UTILITY FUNCTIONS ===== #
@@ -47,9 +53,9 @@ print_help() {
   printf "\n"
 
   printf "Controls:\n"
-  printf "\t%-1s %s\n" "p" "Pause/Play music"
+  printf "\t%-1s %s\n" "k" "Pause/Play music"
   printf "\t%-1s %s\n" "n" "Next song"
-  printf "\t%-1s %s\n" "b" "Previous song"
+  printf "\t%-1s %s\n" "p" "Previous song"
   printf "\t%-1s %s\n" "q" "Quit"
 }
 
@@ -177,10 +183,10 @@ handle_playback_input() {
     read -rsn1 -t 0.1 key
 
     case "$key" in
-      p)
+      $PAUSE_KEY)
         toggle_pause
         ;;
-      n | b | q)
+      $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
         break
         ;;
     esac
@@ -189,13 +195,13 @@ handle_playback_input() {
 
 process_playback_key() {
   case "$key" in
-    n)
+    $NEXT_SONG_KEY)
       select_next_song
       ;;
-    b)
+    $PREVIOUS_SONG_KEY)
       select_previous_song
       ;;
-    q)
+    $QUIT_KEY)
       cleanup
       ;;
   esac
@@ -218,7 +224,7 @@ run_playback_loop() {
 
     finish_current_playback
 
-    if [[ $key == "" || ($key != "n" && $key != "b") ]]; then
+    if [[ $key == "" || ($key != $NEXT_SONG_KEY && $key != $PREVIOUS_SONG_KEY) ]]; then
       select_next_song
     fi
 
@@ -363,6 +369,8 @@ main() {
   validate_arguments
   build_playlist
   run_player
+
+  printf "\n"
 
   return 0
 }
