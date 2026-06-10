@@ -102,8 +102,7 @@ stop_ffplay() {
 # ===== MEDIA PLAYER ===== #
 sync_playback_position() {
   local now=$(date +%s)
-  local song_duration=$(( now - song_start_time ))
-  (( total_song_duration += song_duration ))
+  (( total_song_duration += (now - song_start_time) ))
 }
 
 rewind_position() {
