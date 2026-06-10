@@ -60,12 +60,12 @@ print_help() {
   printf "\n"
 
   printf "Controls:\n"
-  printf "\t%-1s %s\n" "k" "Pause/Play music"
-  printf "\t%-1s %s\n" "n" "Next song"
-  printf "\t%-1s %s\n" "p" "Previous song"
+  printf "\t%-1s %s\n" "$PAUSE_KEY" "Pause/Play music"
+  printf "\t%-1s %s\n" "$NEXT_SONG_KEY" "Next song"
+  printf "\t%-1s %s\n" "$PREVIOUS_SONG_KEY" "Previous song"
   printf "\t%-1s %s\n" "$SKIP_BACKWARD_KEY" "Seek backward $(( SKIP_LENGTH_MS / 1000 )) seconds"
   printf "\t%-1s %s\n" "$SKIP_FORWARD_KEY" "Seek forward $(( SKIP_LENGTH_MS / 1000 )) seconds"
-  printf "\t%-1s %s\n" "q" "Quit"
+  printf "\t%-1s %s\n" "$QUIT_KEY" "Quit"
 }
 
 print_version_info() {
