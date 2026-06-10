@@ -1,31 +1,123 @@
 # SONIC - Terminal Music Player
 
-## About
+A lightweight terminal music player built on top of `ffplay`.
 
-Sonic is a ffplay wrapper software written in bash
+SONIC provides a simple command-line interface for playing MP3 files and playlists directly from the terminal, with support for pausing, seeking, looping, and playlist navigation.
+
+## Features
+
+* Play individual MP3 files
+* Play all MP3 files from a folder
+* Pause and resume playback
+* Seek forward and backward by 10 seconds
+* Skip to the next or previous song
+* Loop songs or playlists
+* Millisecond-precision playback tracking
+* Lightweight Bash implementation
+* Uses `ffplay` as the playback backend
+
+## Requirements
+
+SONIC currently supports Linux only.
+
+The following dependency must be installed:
+
+* `ffplay`
+
+To verify that `ffplay` is installed:
+
+```shell
+ffplay -version
+```
 
 ## Installation
 
-To install just run the `install.sh` script:
-
-- Go to the [releases](https://github.com/ayushknath/sonic/releases) page and download the `.tar.gz` file to your computer
-- Open a terminal, and use the commands below to install the script
+Download the latest release from GitHub and extract it:
 
 ```shell
-# Navigate to the .tar.gz file you downloaded
-# Replace '/path/to/tar.gz_file' with the actual path to the .tar.gz file
-cd /path/to/tar.gz_file
+tar -xvzf sonic-<version>.tar.gz
+cd sonic-<version>
+```
 
-# Extract the source files
-# Replace 'sonic-1.0.0.tar.gz' with the actual filename that you downloaded
-tar -xvzf ./sonic-1.0.0.tar.gz
+Make the installer executable and run it:
 
-# Navigate inside the extracted directory and run the install script
-cd ./sonic-1.0.0/ # Replace 'sonic-1.0.0' with the actual directory name
-chmod +x ./install.sh
+```shell
+chmod +x install.sh
 ./install.sh
 ```
 
-Now you can invoke the `sonic` script from anywhere
+After installation, the `sonic` command can be invoked from anywhere in your terminal.
 
-Note: This script is exclusively for Linux only.
+## Usage
+
+### Play a single song
+
+```shell
+sonic song.mp3
+```
+
+### Play all MP3 files in a folder
+
+```shell
+sonic -f music/
+```
+
+### Loop a single song
+
+```shell
+sonic song.mp3 --loop
+```
+
+### Loop a playlist
+
+```shell
+sonic -f music/ --loop
+```
+
+## Command-Line Options
+
+| Option                         | Description                       |
+| ------------------------------ | --------------------------------- |
+| `-h`, `--help`                 | Show help                         |
+| `-v`, `--version`              | Show version information          |
+| `-l`, `--loop`                 | Loop the current song or playlist |
+| `-f`, `--play-folder <folder>` | Play all MP3 files in a folder    |
+
+## Playback Controls
+
+While a song is playing:
+
+| Key | Action                   |
+| --- | ------------------------ |
+| `k` | Pause / Resume           |
+| `j` | Seek backward 10 seconds |
+| `l` | Seek forward 10 seconds  |
+| `n` | Next song                |
+| `p` | Previous song            |
+| `q` | Quit                     |
+
+## Supported Formats
+
+Currently SONIC supports:
+
+* MP3 (`.mp3`)
+
+## Examples
+
+Play a song:
+
+```shell
+sonic ~/Music/song.mp3
+```
+
+Play a folder:
+
+```shell
+sonic -f ~/Music
+```
+
+Loop a folder:
+
+```shell
+sonic -f ~/Music --loop
+```
