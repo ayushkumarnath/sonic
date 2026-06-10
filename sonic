@@ -82,7 +82,7 @@ start_ffplay() {
     ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
   fi
 
-  pid=$!
+  ffplay_pid=$!
 }
 
 ffplay_exists() {
@@ -90,12 +90,12 @@ ffplay_exists() {
 }
 
 stop_ffplay() {
-  if ffplay_exists "$pid"; then
-    kill -CONT "$pid"
+  if ffplay_exists "$ffplay_pid"; then
+    kill -CONT "$ffplay_pid"
     sleep 0.2
-    kill "$pid" 2>/dev/null
-    wait "$pid" 2>/dev/null
-    pid=""
+    kill "$ffplay_pid" 2>/dev/null
+    wait "$ffplay_pid" 2>/dev/null
+    ffplay_pid=""
   fi
 }
 
@@ -131,13 +131,13 @@ print_song_title() {
 }
 
 finish_current_playback() {
-  if ffplay_exists "$pid"; then
-    kill -CONT "$pid"
+  if ffplay_exists "$ffplay_pid"; then
+    kill -CONT "$ffplay_pid"
     sleep 0.2
-    kill "$pid" 2>/dev/null
+    kill "$ffplay_pid" 2>/dev/null
   fi
-  wait "$pid" 2>/dev/null
-  pid=""
+  wait "$ffplay_pid" 2>/dev/null
+  ffplay_pid=""
 }
 
 start_playback() {
@@ -158,7 +158,7 @@ stop_playback() {
 }
 
 pause_playback() {
-  kill -STOP "$pid"
+  kill -STOP "$ffplay_pid"
   printf "${ESC}[u (Paused)"
   is_paused=$TRUE
 }
@@ -234,7 +234,7 @@ trap cleanup SIGINT
 
 # ===== EVENT HANDLING ===== #
 handle_playback_input() {
-  while ffplay_exists "$pid"; do
+  while ffplay_exists "$ffplay_pid"; do
     key=""
     read -rsn1 -t 0.1 key
 
