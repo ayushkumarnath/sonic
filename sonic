@@ -18,12 +18,12 @@ play_folder_enabled=0
 is_paused=$FALSE
 
 # Media playback
-readonly SKIP_LENGTH=10
+readonly SKIP_LENGTH_MS=10000
 file=""
 folder=""
 song=""
-song_start_time=0
-total_song_duration=0
+song_start_time_ms=0
+total_song_duration_ms=0
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -70,6 +70,17 @@ print_version_info() {
   printf "SONIC v${VERSION}\n"
 }
 
+# ===== TIME UTILITIES ===== #
+current_time_ms() {
+  printf '%s\n' "$(( ${EPOCHREALTIME//.} / 1000 ))"
+}
+
+format_ms_to_seconds() {
+  printf '%d.%03d' \
+    $(( $1 / 1000 )) \
+    $(( $1 % 1000 ))
+}
+
 # ===== LOW LEVEL ===== #
 start_ffplay() {
   # params: song, pos?
@@ -101,15 +112,15 @@ stop_ffplay() {
 
 # ===== MEDIA PLAYER ===== #
 sync_playback_position() {
-  local now=$(date +%s)
-  (( total_song_duration += (now - song_start_time) ))
+  local now_ms=$(current_time_ms)
+  (( total_song_duration_ms += (now_ms - song_start_time_ms) ))
 }
 
 rewind_position() {
-  if (( total_song_duration <= SKIP_LENGTH )); then
-    total_song_duration=0
+  if (( total_song_duration_ms <= SKIP_LENGTH_MS )); then
+    total_song_duration_ms=0
   else
-    (( total_song_duration -= SKIP_LENGTH ))
+    (( total_song_duration_ms -= SKIP_LENGTH_MS ))
   fi
 }
 
@@ -164,7 +175,9 @@ pause_playback() {
 
 resume_playback() {
   stop_playback
-  start_playback "$song" "$total_song_duration"
+  start_playback \
+    "$song" \
+    "$(format_ms_to_seconds "$total_song_duration_ms")"
   printf "${ESC}[u${ESC}[K"
   is_paused=$FALSE
 }
@@ -175,7 +188,7 @@ toggle_pause() {
     sync_playback_position
   else
     resume_playback
-    song_start_time=$(date +%s)
+    song_start_time_ms=$(current_time_ms)
   fi
 }
 
@@ -201,13 +214,15 @@ select_previous_song() {
 
 skip_forward() {
   if ((is_paused)); then
-    (( total_song_duration += SKIP_LENGTH ))
+    (( total_song_duration_ms += SKIP_LENGTH_MS ))
   else
     sync_playback_position
-    (( total_song_duration += SKIP_LENGTH ))
+    (( total_song_duration_ms += SKIP_LENGTH_MS ))
     stop_playback
-    start_playback "$song" "$total_song_duration"
-    song_start_time=$(date +%s)
+    start_playback \
+      "$song" \
+      "$(format_ms_to_seconds "$total_song_duration_ms")"
+    song_start_time_ms=$(current_time_ms)
   fi
 }
 
@@ -218,8 +233,10 @@ skip_backward() {
     sync_playback_position
     stop_playback
     rewind_position
-    start_playback "$song" "$total_song_duration"
-    song_start_time=$(date +%s)
+    start_playback \
+      "$song" \
+      "$(format_ms_to_seconds "$total_song_duration_ms")"
+    song_start_time_ms=$(current_time_ms)
   fi
 }
 
@@ -276,10 +293,10 @@ run_playback_loop() {
   while true; do
     song="${playlist[i]}"
     is_paused=$FALSE
-    total_song_duration=0
+    total_song_duration_ms=0
 
     start_playback "$song"
-    song_start_time=$(date +%s)
+    song_start_time_ms=$(current_time_ms)
 
     handle_playback_input
 
