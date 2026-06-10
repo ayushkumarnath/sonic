@@ -63,6 +63,8 @@ print_help() {
   printf "\t%-1s %s\n" "k" "Pause/Play music"
   printf "\t%-1s %s\n" "n" "Next song"
   printf "\t%-1s %s\n" "p" "Previous song"
+  printf "\t%-1s %s\n" "$SKIP_BACKWARD_KEY" "Seek backward $(( SKIP_LENGTH_MS / 1000 )) seconds"
+  printf "\t%-1s %s\n" "$SKIP_FORWARD_KEY" "Seek forward $(( SKIP_LENGTH_MS / 1000 )) seconds"
   printf "\t%-1s %s\n" "q" "Quit"
 }
 
