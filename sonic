@@ -107,7 +107,7 @@ sync_playback_position() {
 }
 
 rewind_position() {
-  if [[ $total_song_duration -le $SKIP_LENGTH ]]; then
+  if (( total_song_duration <= SKIP_LENGTH )); then
     total_song_duration=0
   else
     (( total_song_duration -= SKIP_LENGTH ))
@@ -129,11 +129,6 @@ print_song_title() {
   # Save cursor position
   printf "${ESC}[s"
 }
-
-# TODO: Figure out a way to clear the entire dump or leave it if solution becomes too complex
-# clear_song_title() {
-#   printf "\r${ESC}[K"
-# }
 
 finish_current_playback() {
   if ffplay_exists "$pid"; then
@@ -160,9 +155,6 @@ start_playback() {
 
 stop_playback() {
   stop_ffplay
-
-  # TODO: If implemented then uncomment otherwise delete
-  # clear_song_title
 }
 
 pause_playback() {
