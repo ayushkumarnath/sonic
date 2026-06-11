@@ -18,9 +18,15 @@ SONIC provides a simple command-line interface for playing MP3 files and playlis
 
 ## Requirements
 
-SONIC currently supports Linux only.
+NOTE: SONIC currently supports Linux only.
 
-The following dependency must be installed:
+* `bash` version 5.0+
+
+To check `bash` version:
+
+```shell
+bash --version
+```
 
 * `ffplay`
 
