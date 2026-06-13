@@ -282,20 +282,22 @@ handle_playback_input() {
         key=""
         read -rsn1 -t 0.1 key
 
-        case "$key" in
-            $PAUSE_KEY)
-                toggle_pause
-                ;;
-            $SKIP_FORWARD_KEY)
-                skip_forward
-                ;;
-            $SKIP_BACKWARD_KEY)
-                skip_backward
-                ;;
-            $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
-                break
-                ;;
-        esac
+        if [[ -n "$key" ]]; then
+            case "$key" in
+                $PAUSE_KEY)
+                    toggle_pause
+                    ;;
+                $SKIP_FORWARD_KEY)
+                    skip_forward
+                    ;;
+                $SKIP_BACKWARD_KEY)
+                    skip_backward
+                    ;;
+                $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
+                    break
+                    ;;
+            esac
+        fi
     done
 }
 
