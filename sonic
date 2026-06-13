@@ -27,6 +27,12 @@ song=""
 playback_start_time_ms=0
 total_playback_duration_ms=0
 
+# UI icons
+play_icon='\u25B6'
+pause_icon='\u2759\u2759'
+full_block='\u2588'
+partial_block='\u2591'
+
 # Playback control keys
 readonly PAUSE_KEY="k"
 readonly NEXT_SONG_KEY="n"
