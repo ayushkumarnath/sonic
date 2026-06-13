@@ -83,6 +83,43 @@ format_ms_to_seconds() {
     $(( $1 % 1000 ))
 }
 
+# ===== TIMING STATE ===== #
+timing_start_segment() {
+    song_start_time_ms=$(current_time_ms)
+}
+
+timing_get_position() {
+    printf '%s\n' "$(( total_song_duration_ms + ($(current_time_ms) - song_start_time_ms) ))"
+}
+
+timing_commit_position() {
+    local position=$(timing_get_position)
+    total_song_duration_ms=$position
+}
+
+timing_seek_forward() {
+    # param: seek_len
+    local seek_len=$1
+
+    (( total_song_duration_ms += seek_len ))
+}
+
+timing_seek_backward() {
+    # param: seek_len
+    local seek_len=$1
+
+    if (( total_song_duration_ms <= seek_len )); then
+        total_song_duration_ms=0
+    else
+        (( total_song_duration_ms -= seek_len ))
+    fi
+}
+
+timing_reset() {
+    song_start_time_ms=0
+    total_song_duration_ms=0
+}
+
 # ===== LOW LEVEL ===== #
 start_ffplay() {
   # params: song, pos?
@@ -113,19 +150,6 @@ stop_ffplay() {
 }
 
 # ===== MEDIA PLAYER ===== #
-sync_playback_position() {
-  local now_ms=$(current_time_ms)
-  (( total_song_duration_ms += (now_ms - song_start_time_ms) ))
-}
-
-rewind_position() {
-  if (( total_song_duration_ms <= SKIP_LENGTH_MS )); then
-    total_song_duration_ms=0
-  else
-    (( total_song_duration_ms -= SKIP_LENGTH_MS ))
-  fi
-}
-
 print_song_title() {
   # params: song
   local song="$1"
@@ -187,10 +211,10 @@ resume_playback() {
 toggle_pause() {
   if ! (($is_paused)); then
     pause_playback
-    sync_playback_position
+    timing_commit_position
   else
     resume_playback
-    song_start_time_ms=$(current_time_ms)
+    timing_start_segment
   fi
 }
 
@@ -215,31 +239,31 @@ select_previous_song() {
 }
 
 skip_forward() {
-  if ((is_paused)); then
-    (( total_song_duration_ms += SKIP_LENGTH_MS ))
-  else
-    sync_playback_position
-    (( total_song_duration_ms += SKIP_LENGTH_MS ))
-    stop_playback
-    start_playback \
-      "$song" \
-      "$(format_ms_to_seconds "$total_song_duration_ms")"
-    song_start_time_ms=$(current_time_ms)
-  fi
+    if ((is_paused)); then
+        timing_seek_forward "$SKIP_LENGTH_MS"
+    else
+        timing_commit_position
+        timing_seek_forward "$SKIP_LENGTH_MS"
+        stop_playback
+        start_playback \
+            "$song" \
+            "$(format_ms_to_seconds "$total_song_duration_ms")"
+        timing_start_segment
+    fi
 }
 
 skip_backward() {
-  if ((is_paused)); then
-    rewind_position
-  else
-    sync_playback_position
-    stop_playback
-    rewind_position
-    start_playback \
-      "$song" \
-      "$(format_ms_to_seconds "$total_song_duration_ms")"
-    song_start_time_ms=$(current_time_ms)
-  fi
+    if ((is_paused)); then
+      timing_seek_backward "$SKIP_LENGTH_MS"
+    else
+        timing_commit_position
+        stop_playback
+        timing_seek_backward "$SKIP_LENGTH_MS"
+        start_playback \
+            "$song" \
+            "$(format_ms_to_seconds "$total_song_duration_ms")"
+        timing_start_segment
+    fi
 }
 
 # ===== EXIT HANDLING ===== #
@@ -295,10 +319,10 @@ run_playback_loop() {
   while true; do
     song="${playlist[i]}"
     is_paused=$FALSE
-    total_song_duration_ms=0
+    timing_reset
 
     start_playback "$song"
-    song_start_time_ms=$(current_time_ms)
+    timing_start_segment
 
     handle_playback_input
 
