@@ -122,6 +122,23 @@ timing_reset() {
     total_playback_duration_ms=0
 }
 
+# ===== UI ===== #
+print_song_title() {
+    # params: song
+    local song="$1"
+
+    local song_title="${song##*/}"
+    local len_song_title=${#song_title}
+
+    printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
+    if ((len_song_title > MAX_SONG_TITLE_LEN)); then
+        printf "..."
+    fi
+
+    # Save cursor position
+    printf "${ESC}[s"
+}
+
 # ===== LOW LEVEL ===== #
 start_ffplay() {
     # params: song, pos?
@@ -152,22 +169,6 @@ stop_ffplay() {
 }
 
 # ===== MEDIA PLAYER ===== #
-print_song_title() {
-    # params: song
-    local song="$1"
-
-    local song_title="${song##*/}"
-    local len_song_title=${#song_title}
-
-        printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
-        if ((len_song_title > MAX_SONG_TITLE_LEN)); then
-            printf "..."
-        fi
-
-        # Save cursor position
-        printf "${ESC}[s"
-}
-
 finish_current_playback() {
     if ffplay_exists "$ffplay_pid"; then
         kill -CONT "$ffplay_pid"
@@ -223,21 +224,21 @@ toggle_pause() {
 select_next_song() {
     local len_playlist=${#playlist[@]}
 
-        if ((loop_enabled)); then
-            i=$(((i + 1) % len_playlist))
-        else
-            ((i++))
-        fi
+    if ((loop_enabled)); then
+        i=$(((i + 1) % len_playlist))
+    else
+        ((i++))
+    fi
 }
 
 select_previous_song() {
     local len_playlist=${#playlist[@]}
 
-        if ((loop_enabled)); then
-            i=$(((i - 1 + len_playlist) % len_playlist))
-        else
-            ((i--))
-        fi
+    if ((loop_enabled)); then
+        i=$(((i - 1 + len_playlist) % len_playlist))
+    else
+        ((i--))
+    fi
 }
 
 skip_forward() {
@@ -319,29 +320,29 @@ process_playback_key() {
 run_playback_loop() {
     local len_playlist=${#playlist[@]}
 
-        i=0
-        while true; do
-            song="${playlist[i]}"
-            is_paused=$FALSE
-            timing_reset
+    i=0
+    while true; do
+        song="${playlist[i]}"
+        is_paused=$FALSE
+        timing_reset
 
-            start_playback "$song"
-            timing_start_segment
+        start_playback "$song"
+        timing_start_segment
 
-            handle_playback_input
+        handle_playback_input
 
-            process_playback_key
+        process_playback_key
 
-            finish_current_playback
+        finish_current_playback
 
-            if [[ $key == "" || ($key != $NEXT_SONG_KEY && $key != $PREVIOUS_SONG_KEY) ]]; then
-                select_next_song
-            fi
+        if [[ $key == "" || ($key != $NEXT_SONG_KEY && $key != $PREVIOUS_SONG_KEY) ]]; then
+            select_next_song
+        fi
 
-            if [[ $i -lt 0 || $i -ge $len_playlist ]] && ! ((loop_enabled)); then
-                break
-            fi
-        done
+        if [[ $i -lt 0 || $i -ge $len_playlist ]] && ! ((loop_enabled)); then
+            break
+        fi
+    done
 }
 
 run_player() {
