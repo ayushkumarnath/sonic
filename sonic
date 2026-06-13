@@ -24,8 +24,8 @@ folder=""
 song=""
 
 # Playback state
-song_start_time_ms=0
-total_song_duration_ms=0
+playback_start_time_ms=0
+total_playback_duration_ms=0
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -87,39 +87,39 @@ format_ms_to_seconds() {
 
 # ===== TIMING STATE ===== #
 timing_start_segment() {
-    song_start_time_ms=$(current_time_ms)
+    playback_start_time_ms=$(current_time_ms)
 }
 
 timing_get_position() {
-    printf '%s\n' "$(( total_song_duration_ms + ($(current_time_ms) - song_start_time_ms) ))"
+    printf '%s\n' "$(( total_playback_duration_ms + ($(current_time_ms) - playback_start_time_ms) ))"
 }
 
 timing_commit_position() {
     local position=$(timing_get_position)
-    total_song_duration_ms=$position
+    total_playback_duration_ms=$position
 }
 
 timing_seek_forward() {
     # param: seek_len
     local seek_len=$1
 
-    (( total_song_duration_ms += seek_len ))
+    (( total_playback_duration_ms += seek_len ))
 }
 
 timing_seek_backward() {
     # param: seek_len
     local seek_len=$1
 
-    if (( total_song_duration_ms <= seek_len )); then
-        total_song_duration_ms=0
+    if (( total_playback_duration_ms <= seek_len )); then
+        total_playback_duration_ms=0
     else
-        (( total_song_duration_ms -= seek_len ))
+        (( total_playback_duration_ms -= seek_len ))
     fi
 }
 
 timing_reset() {
-    song_start_time_ms=0
-    total_song_duration_ms=0
+    playback_start_time_ms=0
+    total_playback_duration_ms=0
 }
 
 # ===== LOW LEVEL ===== #
@@ -205,7 +205,7 @@ resume_playback() {
     stop_playback
     start_playback \
         "$song" \
-        "$(format_ms_to_seconds "$total_song_duration_ms")"
+        "$(format_ms_to_seconds "$total_playback_duration_ms")"
     printf "${ESC}[u${ESC}[K"
     is_paused=$FALSE
 }
@@ -249,7 +249,7 @@ skip_forward() {
         stop_playback
         start_playback \
             "$song" \
-            "$(format_ms_to_seconds "$total_song_duration_ms")"
+            "$(format_ms_to_seconds "$total_playback_duration_ms")"
         timing_start_segment
     fi
 }
@@ -263,7 +263,7 @@ skip_backward() {
         timing_seek_backward "$SKIP_LENGTH_MS"
         start_playback \
             "$song" \
-            "$(format_ms_to_seconds "$total_song_duration_ms")"
+            "$(format_ms_to_seconds "$total_playback_duration_ms")"
         timing_start_segment
     fi
 }
