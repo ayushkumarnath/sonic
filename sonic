@@ -30,8 +30,8 @@ total_playback_duration_ms=0
 # UI icons
 play_icon='\u25B6'
 pause_icon='\u2759\u2759'
-full_block='\u2588'
-partial_block='\u2591'
+progress_filled_block_icon='\u2588'
+progress_empty_block_icon='\u2591'
 
 # Playback control keys
 readonly PAUSE_KEY="k"
