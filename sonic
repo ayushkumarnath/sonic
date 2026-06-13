@@ -36,51 +36,51 @@ key=""
 
 # ===== UTILITY FUNCTIONS ===== #
 print_error() {
-  printf "Error: %s\n" "$1"
-  printf "See --help for more info\n"
+    printf "Error: %s\n" "$1"
+    printf "See --help for more info\n"
 }
 
 print_help() {
-  printf "SONIC - Terminal Music Player\n\n"
+    printf "SONIC - Terminal Music Player\n\n"
 
-  printf "Usage:\n"
-  printf "\tsonic <file>\n"
-  printf "\tsonic -f <folder>\n"
-  printf "\tsonic <file> [-l]\n"
-  printf "\tsonic -f <folder> [-l]\n"
+    printf "Usage:\n"
+    printf "\tsonic <file>\n"
+    printf "\tsonic -f <folder>\n"
+    printf "\tsonic <file> [-l]\n"
+    printf "\tsonic -f <folder> [-l]\n"
 
-  printf "\n"
+    printf "\n"
 
-  printf "Options:\n"
-  printf "\t%-24s %s\n" "-h, --help" "Show help"
-  printf "\t%-24s %s\n" "-l, --loop" "Loop song or playlist"
-  printf "\t%-24s %s\n" "-f, --play-folder" "Play songs from the specified folder"
-  printf "\t%-24s %s\n" "-v, --version" "Show version info"
+    printf "Options:\n"
+    printf "\t%-24s %s\n" "-h, --help" "Show help"
+    printf "\t%-24s %s\n" "-l, --loop" "Loop song or playlist"
+    printf "\t%-24s %s\n" "-f, --play-folder" "Play songs from the specified folder"
+    printf "\t%-24s %s\n" "-v, --version" "Show version info"
 
-  printf "\n"
+    printf "\n"
 
-  printf "Controls:\n"
-  printf "\t%-1s %s\n" "$PAUSE_KEY" "Pause/Play music"
-  printf "\t%-1s %s\n" "$NEXT_SONG_KEY" "Next song"
-  printf "\t%-1s %s\n" "$PREVIOUS_SONG_KEY" "Previous song"
-  printf "\t%-1s %s\n" "$SKIP_BACKWARD_KEY" "Seek backward $(( SKIP_LENGTH_MS / 1000 )) seconds"
-  printf "\t%-1s %s\n" "$SKIP_FORWARD_KEY" "Seek forward $(( SKIP_LENGTH_MS / 1000 )) seconds"
-  printf "\t%-1s %s\n" "$QUIT_KEY" "Quit"
+    printf "Controls:\n"
+    printf "\t%-1s %s\n" "$PAUSE_KEY" "Pause/Play music"
+    printf "\t%-1s %s\n" "$NEXT_SONG_KEY" "Next song"
+    printf "\t%-1s %s\n" "$PREVIOUS_SONG_KEY" "Previous song"
+    printf "\t%-1s %s\n" "$SKIP_BACKWARD_KEY" "Seek backward $(( SKIP_LENGTH_MS / 1000 )) seconds"
+    printf "\t%-1s %s\n" "$SKIP_FORWARD_KEY" "Seek forward $(( SKIP_LENGTH_MS / 1000 )) seconds"
+    printf "\t%-1s %s\n" "$QUIT_KEY" "Quit"
 }
 
 print_version_info() {
-  printf "SONIC v${VERSION}\n"
+    printf "SONIC v${VERSION}\n"
 }
 
 # ===== TIME UTILITIES ===== #
 current_time_ms() {
-  printf '%s\n' "$(( ${EPOCHREALTIME//.} / 1000 ))"
+    printf '%s\n' "$(( ${EPOCHREALTIME//.} / 1000 ))"
 }
 
 format_ms_to_seconds() {
-  printf '%d.%03d' \
-    $(( $1 / 1000 )) \
-    $(( $1 % 1000 ))
+    printf '%d.%03d' \
+        $(( $1 / 1000 )) \
+        $(( $1 % 1000 ))
 }
 
 # ===== TIMING STATE ===== #
@@ -122,120 +122,120 @@ timing_reset() {
 
 # ===== LOW LEVEL ===== #
 start_ffplay() {
-  # params: song, pos?
-  local song="$1"
-  local pos="$2"
+    # params: song, pos?
+    local song="$1"
+    local pos="$2"
 
-  if [[ -n $pos ]]; then
-    ffplay -nodisp -autoexit -nostats -hide_banner -ss "$pos" "$song" &
-  else
-    ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
-  fi
+    if [[ -n $pos ]]; then
+        ffplay -nodisp -autoexit -nostats -hide_banner -ss "$pos" "$song" &
+    else
+        ffplay -nodisp -autoexit -nostats -hide_banner "$song" &
+    fi
 
-  ffplay_pid=$!
+    ffplay_pid=$!
 }
 
 ffplay_exists() {
-  [[ -n "$1" ]] && kill -0 "$1" 2>/dev/null
+    [[ -n "$1" ]] && kill -0 "$1" 2>/dev/null
 }
 
 stop_ffplay() {
-  if ffplay_exists "$ffplay_pid"; then
-    kill -CONT "$ffplay_pid"
-    sleep 0.2
-    kill "$ffplay_pid" 2>/dev/null
-    wait "$ffplay_pid" 2>/dev/null
-    ffplay_pid=""
-  fi
+    if ffplay_exists "$ffplay_pid"; then
+        kill -CONT "$ffplay_pid"
+        sleep 0.2
+        kill "$ffplay_pid" 2>/dev/null
+        wait "$ffplay_pid" 2>/dev/null
+        ffplay_pid=""
+    fi
 }
 
 # ===== MEDIA PLAYER ===== #
 print_song_title() {
-  # params: song
-  local song="$1"
+    # params: song
+    local song="$1"
 
-  local song_title="${song##*/}"
-  local len_song_title=${#song_title}
+    local song_title="${song##*/}"
+    local len_song_title=${#song_title}
 
-  printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
-  if ((len_song_title > MAX_SONG_TITLE_LEN)); then
-    printf "..."
-  fi
+        printf "\r${ESC}[KNow playing: %s" "${song_title:0:MAX_SONG_TITLE_LEN}"
+        if ((len_song_title > MAX_SONG_TITLE_LEN)); then
+            printf "..."
+        fi
 
-  # Save cursor position
-  printf "${ESC}[s"
+        # Save cursor position
+        printf "${ESC}[s"
 }
 
 finish_current_playback() {
-  if ffplay_exists "$ffplay_pid"; then
-    kill -CONT "$ffplay_pid"
-    sleep 0.2
-    kill "$ffplay_pid" 2>/dev/null
-  fi
-  wait "$ffplay_pid" 2>/dev/null
-  ffplay_pid=""
+    if ffplay_exists "$ffplay_pid"; then
+        kill -CONT "$ffplay_pid"
+        sleep 0.2
+        kill "$ffplay_pid" 2>/dev/null
+    fi
+    wait "$ffplay_pid" 2>/dev/null
+    ffplay_pid=""
 }
 
 start_playback() {
-  # params: song, pos?
-  local song="$1"
-  local pos="$2"
+    # params: song, pos?
+    local song="$1"
+    local pos="$2"
 
-  if [[ -n $pos ]]; then
-    start_ffplay "$song" "$pos"
-  else
-    start_ffplay "$song"
-  fi
-  print_song_title "$song"
+    if [[ -n $pos ]]; then
+        start_ffplay "$song" "$pos"
+    else
+        start_ffplay "$song"
+    fi
+    print_song_title "$song"
 }
 
 stop_playback() {
-  stop_ffplay
+    stop_ffplay
 }
 
 pause_playback() {
-  kill -STOP "$ffplay_pid"
-  printf "${ESC}[u (Paused)"
-  is_paused=$TRUE
+    kill -STOP "$ffplay_pid"
+    printf "${ESC}[u (Paused)"
+    is_paused=$TRUE
 }
 
 resume_playback() {
-  stop_playback
-  start_playback \
-    "$song" \
-    "$(format_ms_to_seconds "$total_song_duration_ms")"
-  printf "${ESC}[u${ESC}[K"
-  is_paused=$FALSE
+    stop_playback
+    start_playback \
+        "$song" \
+        "$(format_ms_to_seconds "$total_song_duration_ms")"
+    printf "${ESC}[u${ESC}[K"
+    is_paused=$FALSE
 }
 
 toggle_pause() {
-  if ! (($is_paused)); then
-    pause_playback
-    timing_commit_position
-  else
-    resume_playback
-    timing_start_segment
-  fi
+    if ! (($is_paused)); then
+        pause_playback
+        timing_commit_position
+    else
+        resume_playback
+        timing_start_segment
+    fi
 }
 
 select_next_song() {
-  local len_playlist=${#playlist[@]}
+    local len_playlist=${#playlist[@]}
 
-  if ((loop_enabled)); then
-    i=$(((i + 1) % len_playlist))
-  else
-    ((i++))
-  fi
+        if ((loop_enabled)); then
+            i=$(((i + 1) % len_playlist))
+        else
+            ((i++))
+        fi
 }
 
 select_previous_song() {
-  local len_playlist=${#playlist[@]}
+    local len_playlist=${#playlist[@]}
 
-  if ((loop_enabled)); then
-    i=$(((i - 1 + len_playlist) % len_playlist))
-  else
-    ((i--))
-  fi
+        if ((loop_enabled)); then
+            i=$(((i - 1 + len_playlist) % len_playlist))
+        else
+            ((i--))
+        fi
 }
 
 skip_forward() {
@@ -254,7 +254,7 @@ skip_forward() {
 
 skip_backward() {
     if ((is_paused)); then
-      timing_seek_backward "$SKIP_LENGTH_MS"
+        timing_seek_backward "$SKIP_LENGTH_MS"
     else
         timing_commit_position
         stop_playback
@@ -268,222 +268,222 @@ skip_backward() {
 
 # ===== EXIT HANDLING ===== #
 cleanup() {
-  stop_playback
-  printf "\nInterrupted. Exiting...\n"
-  exit 0
+    stop_playback
+    printf "\nInterrupted. Exiting...\n"
+    exit 0
 }
 trap cleanup SIGINT
 
 # ===== EVENT HANDLING ===== #
 handle_playback_input() {
-  while ffplay_exists "$ffplay_pid"; do
-    key=""
-    read -rsn1 -t 0.1 key
+    while ffplay_exists "$ffplay_pid"; do
+        key=""
+        read -rsn1 -t 0.1 key
 
-    case "$key" in
-      $PAUSE_KEY)
-        toggle_pause
-        ;;
-      $SKIP_FORWARD_KEY)
-        skip_forward
-        ;;
-      $SKIP_BACKWARD_KEY)
-        skip_backward
-        ;;
-      $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
-        break
-        ;;
-    esac
-  done
+        case "$key" in
+            $PAUSE_KEY)
+                toggle_pause
+                ;;
+            $SKIP_FORWARD_KEY)
+                skip_forward
+                ;;
+            $SKIP_BACKWARD_KEY)
+                skip_backward
+                ;;
+            $NEXT_SONG_KEY | $PREVIOUS_SONG_KEY | $QUIT_KEY)
+                break
+                ;;
+        esac
+    done
 }
 
 process_playback_key() {
-  case "$key" in
-    $NEXT_SONG_KEY)
-      select_next_song
-      ;;
-    $PREVIOUS_SONG_KEY)
-      select_previous_song
-      ;;
-    $QUIT_KEY)
-      cleanup
-      ;;
-  esac
+    case "$key" in
+        $NEXT_SONG_KEY)
+            select_next_song
+            ;;
+        $PREVIOUS_SONG_KEY)
+            select_previous_song
+            ;;
+        $QUIT_KEY)
+            cleanup
+            ;;
+    esac
 }
 
 # ===== PLAYBACK LOGIC ===== #
 run_playback_loop() {
-  local len_playlist=${#playlist[@]}
+    local len_playlist=${#playlist[@]}
 
-  i=0
-  while true; do
-    song="${playlist[i]}"
-    is_paused=$FALSE
-    timing_reset
+        i=0
+        while true; do
+            song="${playlist[i]}"
+            is_paused=$FALSE
+            timing_reset
 
-    start_playback "$song"
-    timing_start_segment
+            start_playback "$song"
+            timing_start_segment
 
-    handle_playback_input
+            handle_playback_input
 
-    process_playback_key
+            process_playback_key
 
-    finish_current_playback
+            finish_current_playback
 
-    if [[ $key == "" || ($key != $NEXT_SONG_KEY && $key != $PREVIOUS_SONG_KEY) ]]; then
-      select_next_song
-    fi
+            if [[ $key == "" || ($key != $NEXT_SONG_KEY && $key != $PREVIOUS_SONG_KEY) ]]; then
+                select_next_song
+            fi
 
-    if [[ $i -lt 0 || $i -ge $len_playlist ]] && ! ((loop_enabled)); then
-      break
-    fi
-  done
+            if [[ $i -lt 0 || $i -ge $len_playlist ]] && ! ((loop_enabled)); then
+                break
+            fi
+        done
 }
 
 run_player() {
-  if ((loop_enabled)); then
-    printf "Looping enabled\n"
-  fi
+    if ((loop_enabled)); then
+        printf "Looping enabled\n"
+    fi
 
-  run_playback_loop
+    run_playback_loop
 }
 
 # ===== ARGUMENT PARSING ===== #
 parse_arguments() {
-  if [[ $# -eq 0 ]]; then
-    print_help
-    exit 0
-  fi
+    if [[ $# -eq 0 ]]; then
+        print_help
+        exit 0
+    fi
 
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-    "-h" | "--help")
-      print_help
-      exit 0
-      ;;
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            "-h" | "--help")
+                print_help
+                exit 0
+                ;;
 
-    "-v" | "--version")
-      print_version_info
-      exit 0
-      ;;
+            "-v" | "--version")
+                print_version_info
+                exit 0
+                ;;
 
-    "-l" | "--loop")
-      loop_enabled=$TRUE
-      shift
-      ;;
+            "-l" | "--loop")
+                loop_enabled=$TRUE
+                shift
+                ;;
 
-    "-f" | "--play-folder")
-      if [[ -z "$2" ]]; then
-        print_error "'$1' requires a folder"
-        exit 1
-      fi
+            "-f" | "--play-folder")
+                if [[ -z "$2" ]]; then
+                    print_error "'$1' requires a folder"
+                    exit 1
+                fi
 
-      play_folder_enabled=$TRUE
-      folder="${2%/}"
-      shift 2
-      ;;
+                play_folder_enabled=$TRUE
+                folder="${2%/}"
+                shift 2
+                ;;
 
-    -*)
-      print_error "unknown option '$1'"
-      exit 1
-      ;;
+            -*)
+                print_error "unknown option '$1'"
+                exit 1
+                ;;
 
-    *)
-      if [[ -n "$file" ]]; then
-        print_error "cannot play multiple files"
-        exit 1
-      fi
+            *)
+                if [[ -n "$file" ]]; then
+                    print_error "cannot play multiple files"
+                    exit 1
+                fi
 
-      file="$1"
-      shift
-      ;;
-    esac
-  done
+                file="$1"
+                shift
+                ;;
+        esac
+    done
 }
 
 # ===== DEPENDENCY CHECK ===== #
 require() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    missing_deps+=("$1")
-  fi
+    if ! command -v "$1" >/dev/null 2>&1; then
+        missing_deps+=("$1")
+    fi
 }
 
 check_dependencies() {
-  missing_deps=()
+    missing_deps=()
 
-  local deps=("ffplay")
-  local dep
+    local deps=("ffplay")
+    local dep
 
-  for dep in "${deps[@]}"; do
-    require "$dep"
-  done
-
-  if [[ ${#missing_deps[@]} -ne 0 ]]; then
-    for dep in "${missing_deps[@]}"; do
-      printf "${RED}Error:${RESET} dependency '%s' not found\n" "$dep" >&2
+    for dep in "${deps[@]}"; do
+        require "$dep"
     done
-    printf "Please install the required dependencies\n\n" >&2
-    exit 1
-  fi
+
+    if [[ ${#missing_deps[@]} -ne 0 ]]; then
+        for dep in "${missing_deps[@]}"; do
+            printf "${RED}Error:${RESET} dependency '%s' not found\n" "$dep" >&2
+        done
+        printf "Please install the required dependencies\n\n" >&2
+        exit 1
+    fi
 }
 
 # ===== ARGUMENT VALIDATION ===== #
 validate_arguments() {
-  if [[ -n "$file" && -n "$folder" ]]; then
-    print_error "cannot play file and folder together"
-    exit 1
-  fi
+    if [[ -n "$file" && -n "$folder" ]]; then
+        print_error "cannot play file and folder together"
+        exit 1
+    fi
 
-  if [[ -n "$file" && ! -f "$file" ]]; then
-    print_error "invalid file"
-    exit 1
-  fi
+    if [[ -n "$file" && ! -f "$file" ]]; then
+        print_error "invalid file"
+        exit 1
+    fi
 
-  if [[ -n "$folder" && ! -d "$folder" ]]; then
-    print_error "invalid folder"
-    exit 1
-  fi
+    if [[ -n "$folder" && ! -d "$folder" ]]; then
+        print_error "invalid folder"
+        exit 1
+    fi
 }
 
 # ===== BUILD PLAYLIST ===== #
 build_playlist() {
-  playlist=()
+    playlist=()
 
-  local f
+    local f
 
-  if ((play_folder_enabled)); then
-    for f in "$folder"/*; do
-      if [[ -f "$f" && "${f,,}" == *.mp3 ]]; then
-        playlist+=("$f")
-      fi
-    done
+    if ((play_folder_enabled)); then
+        for f in "$folder"/*; do
+            if [[ -f "$f" && "${f,,}" == *.mp3 ]]; then
+                playlist+=("$f")
+            fi
+        done
 
-    if [[ ${#playlist[@]} -eq 0 ]]; then
-      printf "Only mp3 files are supported\n"
-      printf "'$folder' has no mp3 files\n"
-      exit 1
+        if [[ ${#playlist[@]} -eq 0 ]]; then
+            printf "Only mp3 files are supported\n"
+            printf "'$folder' has no mp3 files\n"
+            exit 1
+        fi
+    else
+        if [[ "${file,,}" != *.mp3 ]]; then
+            printf "Error: only mp3 files are supported\n"
+            exit 1
+        fi
+
+        playlist+=("$file")
     fi
-  else
-    if [[ "${file,,}" != *.mp3 ]]; then
-      printf "Error: only mp3 files are supported\n"
-      exit 1
-    fi
-
-    playlist+=("$file")
-  fi
 }
 
 # ===== MAIN ===== #
 main() {
-  parse_arguments "$@"
-  check_dependencies
-  validate_arguments
-  build_playlist
-  run_player
+    parse_arguments "$@"
+    check_dependencies
+    validate_arguments
+    build_playlist
+    run_player
 
-  printf "\n"
+    printf "\n"
 
-  return 0
+    return 0
 }
 
 # ===== PROGRAM STARTS ===== #
