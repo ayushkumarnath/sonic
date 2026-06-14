@@ -174,6 +174,23 @@ stop_ffplay() {
     fi
 }
 
+# ===== MEDIA METADATA ===== #
+probe_media_duration() {
+    # params: song
+    local song="$1"
+
+    local media_duration_seconds="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$song")"
+
+    if [[ -z "$media_duration_seconds" || ! "$media_duration_seconds" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        printf '%s\n' 0
+        return 1
+    fi
+
+    local media_duration_ms=$(awk -v sec="$media_duration_seconds" 'BEGIN { printf "%d\n", sec * 1000 }')
+
+    printf '%s\n' "$media_duration_ms"
+}
+
 # ===== MEDIA PLAYER ===== #
 finish_current_playback() {
     if ffplay_exists "$ffplay_pid"; then
@@ -422,7 +439,7 @@ require() {
 check_dependencies() {
     missing_deps=()
 
-    local deps=("ffplay")
+    local deps=("ffplay" "ffprobe" "gawk")
     local dep
 
     for dep in "${deps[@]}"; do
