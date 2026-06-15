@@ -41,6 +41,7 @@ current_media_duration=0
 current_media_duration_clock=""
 render_tick=0
 is_cursor_hidden=$FALSE
+ui_first_render=$TRUE
 
 # Cursor actions
 readonly CURSOR_SAVE="${ESC}[s"
@@ -252,7 +253,7 @@ render_ui() {
     local frame=""
 
     # Render title
-    if (( render_tick == 5 || render_tick == 10 )); then
+    if (( ui_first_render || render_tick == 5 || render_tick == 10 )); then
         render_title frame
     fi
 
@@ -268,7 +269,7 @@ render_ui() {
     fi
 
     # Render progress
-    if (( render_tick == 10 )); then
+    if (( ui_first_render || render_tick == 10 )); then
         render_progress frame
     fi
 
@@ -468,6 +469,10 @@ handle_playback_input() {
         fi
 
         render_ui "$song"
+
+        if (( ui_first_render )); then
+            ui_first_render=$FALSE
+        fi
     done
 }
 
