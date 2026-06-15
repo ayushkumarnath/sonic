@@ -36,6 +36,7 @@ readonly progress_empty_block_icon='\u2591'
 readonly MAX_SONG_TITLE_LEN=50
 song_title=""
 current_media_duration=0
+current_media_duration_clock=""
 render_tick=0
 
 # Playback control keys
@@ -94,6 +95,29 @@ format_ms_to_seconds() {
     printf '%d.%03d' \
         $(( $1 / 1000 )) \
         $(( $1 % 1000 ))
+}
+
+format_ms_to_clock() {
+    # params: time_ms
+
+    local seconds=$(( $1 / 1000 ))
+    local minutes=0
+    local hours=0
+
+    if ((seconds > 60)); then
+        minutes=$(( seconds / 60 ))
+        (( seconds %= 60 ))
+
+        if ((minutes > 60)); then
+            hours=$(( minutes / 60 ))
+            (( minutes %= 60 ))
+        fi
+    fi
+
+    printf "%02d:%02d:%02d\n" \
+        "$hours" \
+        "$minutes" \
+        "$seconds"
 }
 
 # ===== TIMING STATE ===== #
