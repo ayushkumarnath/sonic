@@ -183,7 +183,7 @@ cursor_unset_hidden() {
     is_cursor_hidden=$FALSE
 }
 
-# ===== UI ===== #
+# ===== UI RENDERING ===== #
 title_overflows() {
     (( ${#song_title} > MAX_SONG_TITLE_LEN ))
 }
@@ -264,7 +264,7 @@ render_ui() {
     render_playback_control frame
 
     # Render loop symbol if enabled
-    if ((loop_enabled)); then
+    if (( loop_enabled )); then
         render_loop_indicator frame
     fi
 
