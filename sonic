@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-readonly VERSION="1.1.0"
+readonly VERSION="1.2.0"
 
 # Global constants
 readonly TRUE=1
