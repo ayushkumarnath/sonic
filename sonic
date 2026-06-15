@@ -15,7 +15,20 @@ readonly RED='\033[0;31m'
 # Configuration states
 loop_enabled=0
 play_folder_enabled=0
-is_paused=$FALSE
+
+# Terminal state
+readonly ENTER_TERM_ALT_BUF="${ESC}[?1049h"
+readonly EXIT_TERM_ALT_BUF="${ESC}[?1049l"
+readonly CLEAR_TERM_ALT_BUF="${ESC}[2J"
+is_term_owned=$FALSE
+
+# Cursor actions
+readonly CURSOR_SAVE="${ESC}[s"
+readonly CURSOR_RESTORE="${ESC}[u"
+readonly CURSOR_ERASE_LINE="${ESC}[K"
+readonly CURSOR_MOVE_HOME="${ESC}[H"
+readonly CURSOR_HIDE="${ESC}[?25l"
+readonly CURSOR_SHOW="${ESC}[?25h"
 
 # Media playback
 readonly SKIP_LENGTH_MS=10000
@@ -26,6 +39,7 @@ song=""
 # Playback state
 playback_start_time_ms=0
 total_playback_duration_ms=0
+is_paused=$FALSE
 
 # UI icons
 readonly play_icon=$'\u25B6'
@@ -42,13 +56,6 @@ current_media_duration_clock=""
 render_tick=0
 is_cursor_hidden=$FALSE
 ui_first_render=$TRUE
-
-# Cursor actions
-readonly CURSOR_SAVE="${ESC}[s"
-readonly CURSOR_RESTORE="${ESC}[u"
-readonly CURSOR_ERASE_LINE="${ESC}[K"
-readonly CURSOR_HIDE="${ESC}[?25l"
-readonly CURSOR_SHOW="${ESC}[?25h"
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -95,6 +102,19 @@ print_help() {
 
 print_version_info() {
     printf "SONIC v${VERSION}\n"
+}
+
+# ===== TERMINAL STATE ===== #
+term_borrow_ownership() {
+    printf "%s" "$ENTER_TERM_ALT_BUF"
+    printf "%s" "${CLEAR_TERM_ALT_BUF}${CURSOR_MOVE_HOME}"
+    is_term_owned=$TRUE
+}
+
+term_release_ownership() {
+    printf "%s" "${CLEAR_TERM_ALT_BUF}${CURSOR_MOVE_HOME}"
+    printf "%s" "$EXIT_TERM_ALT_BUF"
+    is_term_owned=$FALSE
 }
 
 # ===== TIME UTILITIES ===== #
@@ -426,9 +446,15 @@ skip_backward() {
 # ===== EXIT HANDLING ===== #
 cleanup() {
     stop_playback
+
+    if (( is_term_owned )); then
+        term_release_ownership
+    fi
+
     if (( is_cursor_hidden )); then
         cursor_unset_hidden
     fi
+
     printf "\nInterrupted. Exiting...\n"
     exit 0
 }
@@ -509,6 +535,7 @@ run_playback_loop() {
         is_paused=$FALSE
         timing_reset
         render_tick=0
+        ui_first_render=$TRUE
 
         start_playback "$song"
         timing_start_segment
@@ -530,7 +557,11 @@ run_playback_loop() {
 }
 
 run_player() {
+    term_borrow_ownership
+
     run_playback_loop
+
+    term_release_ownership
 }
 
 # ===== ARGUMENT PARSING ===== #
