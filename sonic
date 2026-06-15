@@ -40,11 +40,14 @@ song_title=""
 current_media_duration=0
 current_media_duration_clock=""
 render_tick=0
+is_cursor_hidden=$FALSE
 
 # Cursor actions
 readonly CURSOR_SAVE="${ESC}[s"
 readonly CURSOR_RESTORE="${ESC}[u"
 readonly CURSOR_ERASE_LINE="${ESC}[K"
+readonly CURSOR_HIDE="${ESC}[?25l"
+readonly CURSOR_SHOW="${ESC}[?25h"
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -168,6 +171,17 @@ timing_reset() {
     total_playback_duration_ms=0
 }
 
+# ===== CURSOR STATE ===== #
+cursor_set_hidden() {
+    printf "%s" "$CURSOR_HIDE"
+    is_cursor_hidden=$TRUE
+}
+
+cursor_unset_hidden() {
+    printf "%s" "$CURSOR_SHOW"
+    is_cursor_hidden=$FALSE
+}
+
 # ===== UI ===== #
 title_overflows() {
     (( ${#song_title} > MAX_SONG_TITLE_LEN ))
@@ -230,6 +244,10 @@ render_progress() {
 render_ui() {
     # params: song
     local song="$1"
+
+    if ! (( is_cursor_hidden )); then
+        cursor_set_hidden
+    fi
 
     local frame=""
 
@@ -407,6 +425,9 @@ skip_backward() {
 # ===== EXIT HANDLING ===== #
 cleanup() {
     stop_playback
+    if (( is_cursor_hidden )); then
+        cursor_unset_hidden
+    fi
     printf "\nInterrupted. Exiting...\n"
     exit 0
 }
@@ -641,6 +662,10 @@ main() {
     run_player
 
     printf "\n"
+
+    if (( is_cursor_hidden )); then
+        cursor_unset_hidden
+    fi
 
     return 0
 }
