@@ -7,6 +7,7 @@ readonly TRUE=1
 readonly FALSE=0
 readonly ESC=$'\033'
 readonly RESET='\033[0m'
+readonly CR=$'\r'
 
 # Colors
 readonly RED='\033[0;31m'
@@ -27,11 +28,11 @@ playback_start_time_ms=0
 total_playback_duration_ms=0
 
 # UI icons
-readonly play_icon='\u25B6'
-readonly pause_icon='\u007C\u007C'
-readonly loop_icon='\u21BB'
-readonly progress_filled_block_icon='\u2588'
-readonly progress_empty_block_icon='\u2591'
+readonly play_icon=$'\u25B6'
+readonly pause_icon=$'\u007C\u007C'
+readonly loop_icon=$'\u21BB'
+readonly progress_filled_block_icon=$'\u2588'
+readonly progress_empty_block_icon=$'\u2591'
 
 # UI state
 readonly MAX_SONG_TITLE_LEN=50
@@ -182,7 +183,7 @@ render_title() {
 
     local song_title_length=${#song_title}
 
-    _frame+="\r${CURSOR_ERASE_LINE}[Now playing]: "
+    _frame+="${CR}${CURSOR_ERASE_LINE}[Now playing]: "
 
     if title_overflows; then
         song_title="${song_title:1:$(( song_title_length - 1 ))}${song_title:0:1}"
@@ -196,7 +197,7 @@ render_playback_control() {
     # params: &frame
     local -n _frame=$1
 
-    _frame+="\r"
+    _frame+="${CR}"
     if (( is_paused )); then
         _frame+="${play_icon}  "
     else
@@ -260,7 +261,7 @@ render_ui() {
     # Move two rows up
     frame+="${ESC}[2A"
 
-    printf "$frame"
+    printf "%s" "$frame"
 }
 
 # ===== LOW LEVEL ===== #
