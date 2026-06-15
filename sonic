@@ -174,10 +174,6 @@ title_overflows() {
 }
 
 render_title() {
-    if (( render_tick % 5 != 0 )); then
-        return
-    fi
-
     # params: &frame
     local -n _frame=$1
 
@@ -199,7 +195,7 @@ render_playback_control() {
 
     _frame+="${CR}"
     if (( is_paused )); then
-        _frame+="${play_icon}  "
+        _frame+="${play_icon}   "
     else
         _frame+="${pause_icon}  "
     fi
@@ -211,10 +207,6 @@ render_loop_indicator() {
 }
 
 render_progress() {
-    if (( render_tick % 10 != 0 )); then
-        return
-    fi
-
     # params: &frame
     local -n _frame=$1
 
@@ -242,7 +234,9 @@ render_ui() {
     local frame=""
 
     # Render title
-    render_title frame
+    if (( render_tick == 5 || render_tick == 10 )); then
+        render_title frame
+    fi
 
     # Move two rows down
     frame+="${ESC}[2B"
@@ -256,7 +250,9 @@ render_ui() {
     fi
 
     # Render progress
-    render_progress frame
+    if (( render_tick == 10 )); then
+        render_progress frame
+    fi
 
     # Move two rows up
     frame+="${ESC}[2A"
