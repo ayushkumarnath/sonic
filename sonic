@@ -29,6 +29,7 @@ total_playback_duration_ms=0
 # UI icons
 readonly play_icon='\u25B6'
 readonly pause_icon='\u007C\u007C'
+readonly loop_icon='\u21BB'
 readonly progress_filled_block_icon='\u2588'
 readonly progress_empty_block_icon='\u2591'
 
@@ -38,6 +39,11 @@ song_title=""
 current_media_duration=0
 current_media_duration_clock=""
 render_tick=0
+
+# Cursor actions
+readonly CURSOR_SAVE="${ESC}[s"
+readonly CURSOR_RESTORE="${ESC}[u"
+readonly CURSOR_ERASE_LINE="${ESC}[K"
 
 # Playback control keys
 readonly PAUSE_KEY="k"
@@ -104,11 +110,11 @@ format_ms_to_clock() {
     local minutes=0
     local hours=0
 
-    if ((seconds > 60)); then
+    if ((seconds >= 60)); then
         minutes=$(( seconds / 60 ))
         (( seconds %= 60 ))
 
-        if ((minutes > 60)); then
+        if ((minutes >= 60)); then
             hours=$(( minutes / 60 ))
             (( minutes %= 60 ))
         fi
@@ -126,7 +132,11 @@ timing_start_segment() {
 }
 
 timing_get_position() {
-    printf '%s\n' "$(( total_playback_duration_ms + ($(current_time_ms) - playback_start_time_ms) ))"
+    if (( is_paused )); then
+        printf '%s\n' "$total_playback_duration_ms"
+    else
+        printf '%s\n' "$(( total_playback_duration_ms + ($(current_time_ms) - playback_start_time_ms) ))"
+    fi
 }
 
 timing_commit_position() {
@@ -157,9 +167,6 @@ timing_reset() {
     total_playback_duration_ms=0
 }
 
-# ===== UI STATE ===== #
-
-
 # ===== UI ===== #
 title_overflows() {
     (( ${#song_title} > MAX_SONG_TITLE_LEN ))
@@ -170,26 +177,90 @@ render_title() {
         return
     fi
 
+    # params: &frame
+    local -n _frame=$1
+
     local song_title_length=${#song_title}
 
-    printf "\r${ESC}[K[Now playing]: "
+    _frame+="\r${CURSOR_ERASE_LINE}[Now playing]: "
 
     if title_overflows; then
         song_title="${song_title:1:$(( song_title_length - 1 ))}${song_title:0:1}"
-        printf "%s..." "${song_title:0:$(( MAX_SONG_TITLE_LEN - 3 ))}"
+        _frame+="${song_title:0:$(( MAX_SONG_TITLE_LEN - 3 ))}"
     else
-        printf "%s" "$song_title"
+        _frame+="$song_title"
     fi
+}
+
+render_playback_control() {
+    # params: &frame
+    local -n _frame=$1
+
+    _frame+="\r"
+    if (( is_paused )); then
+        _frame+="${play_icon}  "
+    else
+        _frame+="${pause_icon}  "
+    fi
+}
+
+render_loop_indicator() {
+    local -n _frame=$1
+    _frame+="${loop_icon}  "
+}
+
+render_progress() {
+    if (( render_tick % 10 != 0 )); then
+        return
+    fi
+
+    # params: &frame
+    local -n _frame=$1
+
+    local i
+    local -r PROGRESS_BAR_LEN=20
+    local -r NUM_FILLED_BLOCKS=$(awk -v x="$(timing_get_position)" -v y="$current_media_duration" -v z="$PROGRESS_BAR_LEN" 'BEGIN { printf "%d\n", (x / y) * z}')
+
+    _frame+="["
+    for (( i = 1; i <= PROGRESS_BAR_LEN; i++ )); do
+        if (( i <= NUM_FILLED_BLOCKS )); then
+            _frame+="${progress_filled_block_icon}"
+        else
+            _frame+="${progress_empty_block_icon}"
+        fi
+    done
+    _frame+="] "
+
+    _frame+="${CURSOR_ERASE_LINE}$(format_ms_to_clock $(timing_get_position)) / $current_media_duration_clock"
 }
 
 render_ui() {
     # params: song
     local song="$1"
 
-    render_title
+    local frame=""
 
-    # Save cursor position
-    printf "${ESC}[s"
+    # Render title
+    render_title frame
+
+    # Move two rows down
+    frame+="${ESC}[2B"
+
+    # Render pause/play icon
+    render_playback_control frame
+
+    # Render loop symbol if enabled
+    if ((loop_enabled)); then
+        render_loop_indicator frame
+    fi
+
+    # Render progress
+    render_progress frame
+
+    # Move two rows up
+    frame+="${ESC}[2A"
+
+    printf "$frame"
 }
 
 # ===== LOW LEVEL ===== #
@@ -267,7 +338,6 @@ stop_playback() {
 
 pause_playback() {
     kill -STOP "$ffplay_pid"
-    printf "${ESC}[u (Paused)"
     is_paused=$TRUE
 }
 
@@ -276,7 +346,6 @@ resume_playback() {
     start_playback \
         "$song" \
         "$(format_ms_to_seconds "$total_playback_duration_ms")"
-    printf "${ESC}[u${ESC}[K"
     is_paused=$FALSE
 }
 
@@ -353,6 +422,12 @@ handle_playback_input() {
         read -rsn1 -t 0.1 key
 
         (( render_tick++ ))
+
+        if (( render_tick == 10 )) && ! (( is_paused )); then
+            timing_commit_position
+            timing_start_segment
+        fi
+
         if (( render_tick > 10 )); then
             (( render_tick %= 10 ))
         fi
@@ -406,6 +481,7 @@ run_playback_loop() {
         fi
 
         current_media_duration=$(probe_media_duration "$song")
+        current_media_duration_clock=$(format_ms_to_clock $current_media_duration)
 
         is_paused=$FALSE
         timing_reset
@@ -431,10 +507,6 @@ run_playback_loop() {
 }
 
 run_player() {
-    if ((loop_enabled)); then
-        printf "Looping enabled\n"
-    fi
-
     run_playback_loop
 }
 
