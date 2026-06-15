@@ -218,7 +218,7 @@ render_title() {
 
     if title_overflows; then
         song_title="${song_title:1:$(( song_title_length - 1 ))}${song_title:0:1}"
-        _frame+="${song_title:0:$(( MAX_SONG_TITLE_LEN - 3 ))}"
+        _frame+="${song_title:0:$(( MAX_SONG_TITLE_LEN - 3 ))}..."
     else
         _frame+="$song_title"
     fi
