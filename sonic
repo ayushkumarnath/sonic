@@ -108,10 +108,21 @@ print_version_info() {
 term_borrow_ownership() {
     printf "%s" "$ENTER_TERM_ALT_BUF"
     printf "%s" "${CLEAR_TERM_ALT_BUF}${CURSOR_MOVE_HOME}"
+
+    if ! (( is_cursor_hidden )); then
+        printf "%s" "$CURSOR_HIDE"
+        is_cursor_hidden=$TRUE
+    fi
+
     is_term_owned=$TRUE
 }
 
 term_release_ownership() {
+    if (( is_cursor_hidden )); then
+        printf "%s" "$CURSOR_SHOW"
+        is_cursor_hidden=$FALSE
+    fi
+
     printf "%s" "${CLEAR_TERM_ALT_BUF}${CURSOR_MOVE_HOME}"
     printf "%s" "$EXIT_TERM_ALT_BUF"
     is_term_owned=$FALSE
@@ -192,17 +203,6 @@ timing_reset() {
     total_playback_duration_ms=0
 }
 
-# ===== CURSOR STATE ===== #
-cursor_set_hidden() {
-    printf "%s" "$CURSOR_HIDE"
-    is_cursor_hidden=$TRUE
-}
-
-cursor_unset_hidden() {
-    printf "%s" "$CURSOR_SHOW"
-    is_cursor_hidden=$FALSE
-}
-
 # ===== UI RENDERING ===== #
 title_overflows() {
     (( ${#song_title} > MAX_SONG_TITLE_LEN ))
@@ -265,10 +265,6 @@ render_progress() {
 render_ui() {
     # params: song
     local song="$1"
-
-    if ! (( is_cursor_hidden )); then
-        cursor_set_hidden
-    fi
 
     local frame=""
 
@@ -449,10 +445,6 @@ cleanup() {
 
     if (( is_term_owned )); then
         term_release_ownership
-    fi
-
-    if (( is_cursor_hidden )); then
-        cursor_unset_hidden
     fi
 
     printf "\nInterrupted. Exiting...\n"
@@ -698,10 +690,6 @@ main() {
     run_player
 
     printf "\n"
-
-    if (( is_cursor_hidden )); then
-        cursor_unset_hidden
-    fi
 
     return 0
 }
