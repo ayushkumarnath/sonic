@@ -249,8 +249,9 @@ render_progress() {
     local -n _frame=$1
 
     local i
+    local -r PLAYBACK_POSITION=$(timing_get_position)
     local -r PROGRESS_BAR_LEN=20
-    local -r NUM_FILLED_BLOCKS=$(awk -v x="$(timing_get_position)" -v y="$current_media_duration" -v z="$PROGRESS_BAR_LEN" 'BEGIN { printf "%d\n", (x / y) * z}')
+    local -r NUM_FILLED_BLOCKS=$(awk -v x="$PLAYBACK_POSITION" -v y="$current_media_duration" -v z="$PROGRESS_BAR_LEN" 'BEGIN { printf "%d\n", (x / y) * z}')
 
     _frame+="["
     for (( i = 1; i <= PROGRESS_BAR_LEN; i++ )); do
@@ -262,7 +263,7 @@ render_progress() {
     done
     _frame+="] "
 
-    _frame+="${CURSOR_ERASE_LINE}$(format_ms_to_clock $(timing_get_position)) / $current_media_duration_clock"
+    _frame+="${CURSOR_ERASE_LINE}$(format_ms_to_clock $PLAYBACK_POSITION) / $current_media_duration_clock"
 }
 
 render_ui() {
