@@ -42,9 +42,12 @@ total_playback_duration_ms=0
 is_paused=$FALSE
 
 # UI icons
-readonly play_icon=$'\u25B6'
-readonly pause_icon=$'\u007C\u007C'
-readonly loop_icon=$'\u21BB'
+# readonly play_icon=$'\u25B6'
+readonly play_icon=$'\uf04b'
+# readonly pause_icon=$'\u007C\u007C'
+readonly pause_icon=$'\uf04c'
+# readonly loop_icon=$'\u21BB'
+readonly loop_icon=$'\uf01e'
 readonly progress_filled_block_icon=$'\u2588'
 readonly progress_empty_block_icon=$'\u2591'
 
@@ -230,7 +233,7 @@ render_playback_control() {
 
     _frame+="${CR}"
     if (( is_paused )); then
-        _frame+="${play_icon}   "
+        _frame+="${play_icon}  "
     else
         _frame+="${pause_icon}  "
     fi
