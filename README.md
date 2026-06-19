@@ -20,6 +20,8 @@ SONIC provides a simple command-line interface for playing MP3 files and playlis
 
 NOTE: SONIC currently supports Linux only.
 
+* Nerd font to display icons
+
 * `bash` version 5.0+
 
 To check `bash` version:
