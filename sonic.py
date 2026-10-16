@@ -241,7 +241,7 @@ def render_loop_indicator(frame):
 
 def render_progress(frame):
     PLAYBACK_POSITION = timing_get_position()
-    PROGRESS_BAR_LEN = 20
+    PROGRESS_BAR_LEN = 30
     NUM_FILLED_BLOCKS = int(
         PLAYBACK_POSITION / current_media_duration * PROGRESS_BAR_LEN
     )
