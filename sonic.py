@@ -533,6 +533,7 @@ def run_playback_loop():
 
     len_playlist = len(playlist)
 
+    zero_duration_tracks = 0
     song_index = 0
     while True:
         song = playlist[song_index]
@@ -543,8 +544,23 @@ def run_playback_loop():
             song_title = f"  {song_title}  "
 
         current_media_duration = probe_media_duration(song)
+
+        # checks if a media has zero duration and plays the next
+        # song, if there is one to play
         if current_media_duration == 0:
-            return
+            # Track the number of tracks with zero duration
+            zero_duration_tracks += 1
+
+            if zero_duration_tracks == len_playlist:
+                break
+
+            select_next_song()
+            if not loop_enabled and song_index >= len_playlist:
+                break
+            continue
+
+        # Reset bad tracks counter when a good track is found
+        zero_duration_tracks = 0
 
         current_media_duration_clock = format_ms_to_clock(current_media_duration)
 
