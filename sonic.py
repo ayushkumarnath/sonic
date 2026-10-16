@@ -467,9 +467,6 @@ def cleanup(signum, frame):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, cleanup)
-
-
 # ===== EVENT HANDLING ===== #
 async def handle_playback_input():
     global render_tick, ui_first_render
@@ -691,6 +688,8 @@ def build_playlist():
 
 # ===== MAIN ===== #
 def main(args):
+    signal.signal(signal.SIGINT, cleanup)
+
     parse_arguments(args)
     check_dependencies()
     validate_arguments()
