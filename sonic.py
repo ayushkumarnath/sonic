@@ -13,7 +13,7 @@ RESET = f"{ESC}[0m"
 CR = "\r"
 
 # Colors
-RED = "{ESC}[0;31m"
+RED = f"{ESC}[0;31m"
 
 # Configuration states
 loop_enabled = False
@@ -287,7 +287,8 @@ def render_ui():
     # Move two rows up
     frame["curr"] += f"{ESC}[2A"
 
-    write("%s" % (frame["curr"],))
+    write(frame["curr"])
+    sys.stdout.flush()
 
 
 # ===== LOW LEVEL ===== #
@@ -599,7 +600,7 @@ def parse_arguments(args):
             loop_enabled = True
             args = args[1:]
         elif args[0] == "-f" or args[0] == "--play-folder":
-            if not args[1]:
+            if len(args) == 1 or not args[1]:
                 print_error(f"'{args[0]}' requires a folder")
                 sys.exit(1)
 
@@ -666,7 +667,12 @@ def build_playlist():
     playlist = []
 
     if play_folder_enabled:
-        for entry in os.listdir(folder):
+        # Sort the files in alphabetical order
+        for entry in sorted(os.listdir(folder)):
+            # Skips hidden files
+            if entry.startswith("."):
+                continue
+
             path = os.path.join(folder, entry)
             if os.path.isfile(path) and path.lower().endswith(".mp3"):
                 playlist.append(path)
