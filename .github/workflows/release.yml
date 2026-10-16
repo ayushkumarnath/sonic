@@ -1,0 +1,81 @@
+name: Build and publish Linux release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build executable
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            ubuntu:22.04 \
+            bash -euc '
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install --yes \
+                python3 python3-pip python3-venv ffmpeg
+              python3 -m venv build/python310
+              build/python310/bin/python -m pip install -r requirements-build.txt
+              build/python310/bin/python -m PyInstaller \
+                --clean --noconfirm --onefile --name sonic \
+                --specpath build --workpath build/work --distpath dist sonic.py
+              ./dist/sonic --help
+              ./dist/sonic --version
+              set +e
+              ./dist/sonic /definitely/not/a/song.mp3 \
+                >build/smoke.stdout 2>build/smoke.stderr
+              status=$?
+              set -e
+              test "$status" -eq 1
+              ! grep -q "prompt_toolkit.*not found" build/smoke.stderr
+              grep -q "invalid file" build/smoke.stderr
+            '
+
+      - name: Package release archive
+        id: package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          app_version="$(python -c 'from sonic_player.settings import VERSION; print(VERSION)')"
+          test "$version" = "$app_version"
+          archive_root="sonic-${version}"
+          mkdir -p "release/${archive_root}/dist"
+          cp ./dist/sonic "release/${archive_root}/dist/sonic"
+          cp ./install.sh ./README.md "release/${archive_root}/"
+          chmod 755 "release/${archive_root}/install.sh"
+          archive="sonic-${version}-linux-x86_64.tar.gz"
+          tar -czf "release/${archive}" -C release "${archive_root}"
+          sha256sum "release/${archive}" > "release/${archive}.sha256"
+          echo "archive=release/${archive}" >> "$GITHUB_OUTPUT"
+          echo "checksum=release/${archive}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "${{ steps.package.outputs.archive }}" \
+            "${{ steps.package.outputs.checksum }}" \
+            --title "SONIC ${GITHUB_REF_NAME#v}" \
+            --generate-notes

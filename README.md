@@ -1,131 +1,122 @@
 # SONIC - Terminal Music Player
 
-A lightweight terminal music player built on top of `ffplay`.
-
-SONIC provides a simple command-line interface for playing MP3 files and playlists directly from the terminal, with support for pausing, seeking, looping, and playlist navigation.
+SONIC is a terminal music player for Linux. It plays MP3 files and playlists with `ffplay`, and provides playback controls, seeking, and looping.
 
 ## Features
 
-* Play individual MP3 files
-* Play all MP3 files from a folder
-* Pause and resume playback
-* Seek forward and backward by 10 seconds
-* Skip to the next or previous song
-* Loop songs or playlists
-* Millisecond-precision playback tracking
-* Lightweight Bash implementation
-* Uses `ffplay` as the playback backend
+- Play an MP3 file or all MP3 files in a folder
+- Pause and resume playback
+- Seek forward or backward by 10 seconds
+- Move to the next or previous song
+- Loop a song or playlist
+- Display playback progress and elapsed time
 
 ## Requirements
 
-NOTE: SONIC currently supports Linux only.
+- Linux x86_64. Prebuilt releases target Ubuntu 22.04 and compatible systems.
+- `ffplay` and `ffprobe`, provided by FFmpeg. On Ubuntu, install them with:
 
-* Nerd font to display icons
+  ```shell
+  sudo apt install ffmpeg
+  ```
 
-* `bash` version 5.0+
+- A Nerd Font is recommended for the playback icons.
 
-To check `bash` version:
+The packaged executable includes Python and `prompt_toolkit`. You do not need to install Python to use a release binary. FFmpeg remains an external dependency.
 
-```shell
-bash --version
-```
+## Install a release
 
-* `ffplay`
-
-To verify that `ffplay` is installed:
-
-```shell
-ffplay -version
-```
-
-## Installation
-
-Download the latest release from GitHub and extract it:
+Download the Linux x86_64 archive from the project's GitHub Releases page and extract it. From the extracted directory, run the installer:
 
 ```shell
-tar -xvzf sonic-<version>.tar.gz
+tar -xzf sonic-<version>-linux-x86_64.tar.gz
 cd sonic-<version>
-```
-
-Make the installer executable and run it:
-
-```shell
-chmod +x install.sh
 ./install.sh
 ```
 
-After installation, the `sonic` command can be invoked from anywhere in your terminal.
+The installer copies the packaged executable from `dist/sonic` to `~/.local/bin/sonic`. It does not edit shell startup files. If `~/.local/bin` is not in your `PATH`, the installer prints a command to add it for the current shell.
+
+Check the installation with:
+
+```shell
+sonic --version
+```
+
+## Run from source
+
+Install Python 3, FFmpeg, and the Python dependency, then run the entry point:
+
+```shell
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python sonic.py --help
+```
+
+## Build a standalone executable
+
+Install the pinned build dependencies in the virtual environment and build the one-file Linux executable:
+
+```shell
+.venv/bin/python -m pip install -r requirements-build.txt
+.venv/bin/python -m PyInstaller --clean --noconfirm --onefile --name sonic --specpath build --workpath build/work --distpath dist sonic.py
+```
+
+The executable is written to `dist/sonic`. Test it with:
+
+```shell
+./dist/sonic --help
+./dist/sonic --version
+```
+
+To install this local build, run `./install.sh` from the project root. Build Linux binaries on Linux for the target architecture; the executable still requires compatible system libraries and FFmpeg tools.
+
+## Run the tests
+
+From the project root, run:
+
+```shell
+python3 -m unittest discover -s tests -v
+```
 
 ## Usage
 
-### Play a single song
-
-```shell
-sonic song.mp3
-```
-
-### Play all MP3 files in a folder
-
-```shell
-sonic -f music/
-```
-
-### Loop a single song
-
-```shell
-sonic song.mp3 --loop
-```
-
-### Loop a playlist
-
-```shell
-sonic -f music/ --loop
-```
-
-## Command-Line Options
-
-| Option                         | Description                       |
-| ------------------------------ | --------------------------------- |
-| `-h`, `--help`                 | Show help                         |
-| `-v`, `--version`              | Show version information          |
-| `-l`, `--loop`                 | Loop the current song or playlist |
-| `-f`, `--play-folder <folder>` | Play all MP3 files in a folder    |
-
-## Playback Controls
-
-While a song is playing:
-
-| Key | Action                   |
-| --- | ------------------------ |
-| `k` | Pause / Resume           |
-| `j` | Seek backward 10 seconds |
-| `l` | Seek forward 10 seconds  |
-| `n` | Next song                |
-| `p` | Previous song            |
-| `q` | Quit                     |
-
-## Supported Formats
-
-Currently SONIC supports:
-
-* MP3 (`.mp3`)
-
-## Examples
-
-Play a song:
+Play one song:
 
 ```shell
 sonic ~/Music/song.mp3
 ```
 
-Play a folder:
+Play all MP3 files in a folder:
 
 ```shell
 sonic -f ~/Music
 ```
 
-Loop a folder:
+Loop a song or folder playlist:
 
 ```shell
+sonic ~/Music/song.mp3 --loop
 sonic -f ~/Music --loop
 ```
+
+## Command-line options
+
+| Option | Description |
+| --- | --- |
+| `-h`, `--help` | Show help |
+| `-v`, `--version` | Show version |
+| `-l`, `--loop` | Loop a song or playlist |
+| `-f`, `--play-folder <folder>` | Play MP3 files from a folder |
+
+## Playback controls
+
+| Key | Action |
+| --- | --- |
+| `k` | Pause or resume |
+| `j` | Seek backward 10 seconds |
+| `l` | Seek forward 10 seconds |
+| `n` | Next song |
+| `p` | Previous song |
+| `q` | Quit |
+
+SONIC currently supports MP3 (`.mp3`) files.
