@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Tag to build and publish (for example, v2.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,6 +20,8 @@ jobs:
     steps:
       - name: Check out tagged source
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -56,7 +64,8 @@ jobs:
       - name: Package release archive
         id: package
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          release_ref="${{ inputs.source_ref || github.ref_name }}"
+          version="${release_ref#v}"
           app_version="$(python -c 'from sonic_player.settings import VERSION; print(VERSION)')"
           test "$version" = "$app_version"
           archive_root="sonic-${version}"
@@ -74,8 +83,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          release_ref="${{ inputs.source_ref || github.ref_name }}"
+          gh release create "$release_ref" \
             "${{ steps.package.outputs.archive }}" \
             "${{ steps.package.outputs.checksum }}" \
-            --title "SONIC ${GITHUB_REF_NAME#v}" \
+            --title "SONIC ${release_ref#v}" \
             --generate-notes
