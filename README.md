@@ -68,7 +68,7 @@ The executable is written to `dist/sonic`. Test it with:
 ./dist/sonic --version
 ```
 
-To install this local build, run `./install.sh` from the project root. Build Linux binaries on Linux for the target architecture; the executable still requires compatible system libraries and FFmpeg tools.
+To install this local build, run `./install.sh` from the project root. If `dist/sonic` is missing, the installer creates an isolated build environment under `build/`, installs the pinned build dependencies, and builds the executable before installing it. This requires Python 3, Python venv support, and network access for the initial dependency install. Build Linux binaries on Linux for the target architecture; the executable still requires compatible system libraries and FFmpeg tools.
 
 ## Run the tests
 
