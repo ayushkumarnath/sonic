@@ -3,10 +3,11 @@
 import math
 import signal
 import subprocess
-import time
 
 
 class MediaBackend:
+    STOP_TIMEOUT_SECONDS = 1
+
     def __init__(self):
         self.process = None
 
@@ -62,22 +63,31 @@ class MediaBackend:
         process = self.process
         if process is None:
             return
+        self.process = None
+
+        if process.poll() is not None:
+            process.wait()
+            return
+
+        try:
+            process.send_signal(signal.SIGCONT)
+        except ProcessLookupError:
+            pass
 
         if process.poll() is None:
             try:
-                process.send_signal(signal.SIGCONT)
+                process.terminate()
             except ProcessLookupError:
                 pass
 
-            if process.poll() is None:
-                time.sleep(0.2)
-                try:
-                    process.terminate()
-                except ProcessLookupError:
-                    pass
-
-        process.wait()
-        self.process = None
+        try:
+            process.wait(timeout=self.STOP_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+            process.wait()
 
     def finish(self):
         self.stop()

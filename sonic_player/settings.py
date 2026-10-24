@@ -1,6 +1,6 @@
 """Shared application constants."""
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 ESC = "\033"
 RESET = f"{ESC}[0m"

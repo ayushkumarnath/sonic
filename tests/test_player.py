@@ -1,4 +1,5 @@
 import asyncio
+import signal
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -58,6 +59,36 @@ class PlaylistFlowTests(unittest.TestCase):
         asyncio.run(player._run_playlist())
         self.assertEqual(player.error_message, "No tracks with a readable duration were found.")
         player._play_current_track.assert_not_called()
+
+
+class PlayerShutdownTests(unittest.TestCase):
+    def test_termination_signal_stops_media_before_player_exits(self):
+        player = Player(PlayerOptions(), ["song.mp3"])
+        player.media = Mock()
+        player.terminal = Mock()
+        installed_handlers = {}
+
+        def set_handler(signum, handler):
+            installed_handlers[signum] = handler
+
+        def terminate_player(coroutine):
+            coroutine.close()
+            installed_handlers[signal.SIGTERM](signal.SIGTERM, None)
+
+        with patch("sonic_player.player.signal.getsignal", return_value=signal.SIG_DFL), patch(
+            "sonic_player.player.signal.signal", side_effect=set_handler
+        ), patch("sonic_player.player.asyncio.run", side_effect=terminate_player):
+            self.assertEqual(player.run(), 0)
+
+        player.media.stop.assert_called_once_with()
+        player.terminal.leave.assert_called_once_with()
+        for signum in (
+            signal.SIGINT,
+            signal.SIGTERM,
+            signal.SIGHUP,
+            signal.SIGQUIT,
+        ):
+            self.assertIn(signum, installed_handlers)
 
 
 class PlaybackControlTests(unittest.TestCase):

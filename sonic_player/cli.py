@@ -1,5 +1,6 @@
 """Command-line parsing, validation, and application startup."""
 
+import fcntl
 import importlib.util
 import os
 import shutil
@@ -23,6 +24,27 @@ from .settings import (
 
 class CLIError(Exception):
     pass
+
+
+INSTANCE_LOCK_PATH = f"/tmp/sonic-{os.getuid()}.lock"
+
+
+def acquire_instance_lock():
+    """Acquire and return the process-wide playback lock."""
+    flags = os.O_CREAT | os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(INSTANCE_LOCK_PATH, flags, 0o600)
+    lock_file = os.fdopen(descriptor, "a+")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        lock_file.close()
+        raise CLIError("another SONIC instance is already running") from error
+    except BaseException:
+        lock_file.close()
+        raise
+    return lock_file
 
 
 def print_error(message):
@@ -50,8 +72,14 @@ def print_help():
     print("\t%-1s %s" % (PAUSE_KEY, "Pause/Play music"))
     print("\t%-1s %s" % (NEXT_SONG_KEY, "Next song"))
     print("\t%-1s %s" % (PREVIOUS_SONG_KEY, "Previous song"))
-    print("\t%-1s %s" % (SKIP_BACKWARD_KEY, f"Seek backward {SKIP_LENGTH_MS // 1000} seconds"))
-    print("\t%-1s %s" % (SKIP_FORWARD_KEY, f"Seek forward {SKIP_LENGTH_MS // 1000} seconds"))
+    print(
+        "\t%-1s %s"
+        % (SKIP_BACKWARD_KEY, f"Seek backward {SKIP_LENGTH_MS // 1000} seconds")
+    )
+    print(
+        "\t%-1s %s"
+        % (SKIP_FORWARD_KEY, f"Seek forward {SKIP_LENGTH_MS // 1000} seconds")
+    )
     print("\t%-1s %s" % (QUIT_KEY, "Quit"))
 
 
@@ -106,7 +134,10 @@ def check_dependencies():
 
     if missing:
         for dependency in missing:
-            print(f"{RED}Error:{RESET} dependency '{dependency}' not found", file=sys.stderr)
+            print(
+                f"{RED}Error:{RESET} dependency '{dependency}' not found",
+                file=sys.stderr,
+            )
         print("Please install the required dependencies\n", file=sys.stderr)
         raise CLIError("missing dependencies")
 
@@ -155,8 +186,6 @@ def main(argv=None):
         if options is None:
             return 0
         check_dependencies()
-        validate_options(options)
-        playlist = build_playlist(options)
     except CLIError as error:
         if str(error) != "missing dependencies":
             print_error(str(error))
@@ -165,4 +194,25 @@ def main(argv=None):
         print_error(str(error))
         return 1
 
-    return Player(options, playlist).run()
+    try:
+        lock_file = acquire_instance_lock()
+    except CLIError as error:
+        print_error(str(error))
+        return 1
+    except OSError as error:
+        print_error(f"could not acquire instance lock: {error}")
+        return 1
+
+    try:
+        validate_options(options)
+        playlist = build_playlist(options)
+        return Player(options, playlist).run()
+    except CLIError as error:
+        if str(error) != "missing dependencies":
+            print_error(str(error))
+        return 1
+    except OSError as error:
+        print_error(str(error))
+        return 1
+    finally:
+        lock_file.close()

@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 from sonic_player.cli import (
     CLIError,
+    acquire_instance_lock,
     build_playlist,
     main,
     parse_arguments,
@@ -77,10 +78,19 @@ class ValidationAndPlaylistTests(unittest.TestCase):
                 build_playlist(PlayerOptions())
 
     def test_main_help_does_not_check_dependencies(self):
-        with patch("sonic_player.cli.check_dependencies") as dependencies:
+        with patch("sonic_player.cli.check_dependencies") as dependencies, patch(
+            "sonic_player.cli.acquire_instance_lock"
+        ) as lock:
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["--help"]), 0)
             dependencies.assert_not_called()
+            lock.assert_not_called()
+
+    def test_main_version_does_not_acquire_lock(self):
+        with patch("sonic_player.cli.acquire_instance_lock") as lock:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(main(["--version"]), 0)
+            lock.assert_not_called()
 
     def test_main_reports_cli_error_and_returns_one(self):
         stderr = io.StringIO()
@@ -91,11 +101,45 @@ class ValidationAndPlaylistTests(unittest.TestCase):
     @patch("sonic_player.cli.Player")
     @patch("sonic_player.cli.check_dependencies")
     def test_main_validates_and_starts_player(self, dependencies, player_class):
-        with tempfile.NamedTemporaryFile(suffix=".mp3") as song:
+        with tempfile.TemporaryDirectory() as lock_dir, tempfile.NamedTemporaryFile(suffix=".mp3") as song, patch(
+            "sonic_player.cli.INSTANCE_LOCK_PATH", os.path.join(lock_dir, "sonic.lock")
+        ):
             player_class.return_value.run.return_value = 0
             self.assertEqual(main([song.name]), 0)
+            lock_file = acquire_instance_lock()
+            lock_file.close()
         dependencies.assert_called_once_with()
         player_class.return_value.run.assert_called_once_with()
+
+    @patch("sonic_player.cli.Player")
+    @patch("sonic_player.cli.check_dependencies")
+    def test_main_rejects_second_instance_without_starting_player(self, dependencies, player_class):
+        with tempfile.TemporaryDirectory() as lock_dir, tempfile.NamedTemporaryFile(suffix=".mp3") as song, patch(
+            "sonic_player.cli.INSTANCE_LOCK_PATH", os.path.join(lock_dir, "sonic.lock")
+        ):
+            held_lock = acquire_instance_lock()
+            stderr = io.StringIO()
+            try:
+                with contextlib.redirect_stderr(stderr):
+                    self.assertEqual(main([song.name]), 1)
+            finally:
+                held_lock.close()
+        self.assertIn("another SONIC instance is already running", stderr.getvalue())
+        player_class.assert_not_called()
+        dependencies.assert_called_once_with()
+
+    @patch("sonic_player.cli.Player")
+    @patch("sonic_player.cli.check_dependencies")
+    def test_main_releases_lock_when_player_raises(self, dependencies, player_class):
+        with tempfile.TemporaryDirectory() as lock_dir, tempfile.NamedTemporaryFile(suffix=".mp3") as song, patch(
+            "sonic_player.cli.INSTANCE_LOCK_PATH", os.path.join(lock_dir, "sonic.lock")
+        ):
+            player_class.return_value.run.side_effect = RuntimeError("playback failed")
+            with self.assertRaisesRegex(RuntimeError, "playback failed"):
+                main([song.name])
+            lock_file = acquire_instance_lock()
+            lock_file.close()
+        dependencies.assert_called_once_with()
 
 
 if __name__ == "__main__":

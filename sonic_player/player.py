@@ -39,8 +39,17 @@ class Player:
         self.terminal = TerminalUI()
 
     def run(self):
-        previous_handler = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, self._handle_interrupt)
+        handled_signals = [
+            signal.SIGINT,
+            signal.SIGTERM,
+            signal.SIGHUP,
+            signal.SIGQUIT,
+        ]
+        previous_handlers = {
+            signum: signal.getsignal(signum) for signum in handled_signals
+        }
+        for signum in handled_signals:
+            signal.signal(signum, self._handle_interrupt)
         interrupted = False
 
         try:
@@ -49,13 +58,16 @@ class Player:
         except KeyboardInterrupt:
             interrupted = True
         finally:
+            for signum in handled_signals:
+                signal.signal(signum, signal.SIG_IGN)
             try:
                 self.media.stop()
             finally:
                 try:
                     self.terminal.leave()
                 finally:
-                    signal.signal(signal.SIGINT, previous_handler)
+                    for signum, handler in previous_handlers.items():
+                        signal.signal(signum, handler)
 
         if interrupted:
             print("\nInterrupted. Exiting...")

@@ -54,8 +54,7 @@ class MediaLifecycleTests(unittest.TestCase):
         backend.process.poll.return_value = 0
         self.assertFalse(backend.is_running())
 
-    @patch("sonic_player.media.time.sleep")
-    def test_stop_resumes_then_terminates_and_waits(self, sleep):
+    def test_stop_resumes_then_terminates_and_waits(self):
         process = Mock()
         process.poll.side_effect = [None, None]
         backend = MediaBackend()
@@ -63,12 +62,10 @@ class MediaLifecycleTests(unittest.TestCase):
         backend.stop()
         process.send_signal.assert_called_once()
         process.terminate.assert_called_once_with()
-        process.wait.assert_called_once_with()
-        sleep.assert_called_once_with(0.2)
+        process.wait.assert_called_once_with(timeout=MediaBackend.STOP_TIMEOUT_SECONDS)
         self.assertIsNone(backend.process)
 
-    @patch("sonic_player.media.time.sleep")
-    def test_stop_waits_without_terminating_finished_process(self, sleep):
+    def test_stop_waits_without_terminating_finished_process(self):
         process = Mock()
         process.poll.return_value = 0
         backend = MediaBackend()
@@ -77,7 +74,6 @@ class MediaLifecycleTests(unittest.TestCase):
         process.terminate.assert_not_called()
         process.send_signal.assert_not_called()
         process.wait.assert_called_once_with()
-        sleep.assert_not_called()
         self.assertIsNone(backend.process)
 
     def test_stop_without_process_is_safe(self):
@@ -85,8 +81,7 @@ class MediaLifecycleTests(unittest.TestCase):
         backend.stop()
         self.assertIsNone(backend.process)
 
-    @patch("sonic_player.media.time.sleep")
-    def test_stop_tolerates_process_disappearing_during_signal(self, sleep):
+    def test_stop_tolerates_process_disappearing_during_signal(self):
         process = Mock()
         process.poll.return_value = None
         process.send_signal.side_effect = ProcessLookupError
@@ -94,8 +89,19 @@ class MediaLifecycleTests(unittest.TestCase):
         backend.process = process
         backend.stop()
         process.terminate.assert_called_once_with()
-        process.wait.assert_called_once_with()
-        sleep.assert_called_once_with(0.2)
+        process.wait.assert_called_once_with(timeout=MediaBackend.STOP_TIMEOUT_SECONDS)
+
+    def test_stop_kills_process_if_terminate_times_out(self):
+        process = Mock()
+        process.poll.side_effect = [None, None]
+        process.wait.side_effect = [subprocess.TimeoutExpired("ffplay", 1), None]
+        backend = MediaBackend()
+        backend.process = process
+        backend.stop()
+        process.terminate.assert_called_once_with()
+        process.kill.assert_called_once_with()
+        self.assertEqual(process.wait.call_count, 2)
+        self.assertIsNone(backend.process)
 
 
 if __name__ == "__main__":
