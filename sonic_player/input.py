@@ -5,6 +5,8 @@ import sys
 
 
 CONTROL_C = "\x03"
+RIGHT_ARROW = "\x1b[C"
+LEFT_ARROW = "\x1b[D"
 
 
 class KeyReader:

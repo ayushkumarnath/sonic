@@ -5,7 +5,7 @@ import os
 import signal
 import sys
 
-from .input import CONTROL_C, KeyReader
+from .input import CONTROL_C, LEFT_ARROW, RIGHT_ARROW, KeyReader
 from .media import MediaBackend
 from .models import PlaybackSnapshot, PlayerOptions
 from .settings import (
@@ -16,6 +16,7 @@ from .settings import (
     SKIP_BACKWARD_KEY,
     SKIP_FORWARD_KEY,
     SKIP_LENGTH_MS,
+    SPACE_KEY,
 )
 from .terminal import TerminalUI
 from .timing import PlaybackClock, format_ms_to_seconds
@@ -91,7 +92,9 @@ class Player:
             if self.media_duration_ms == 0:
                 self.zero_duration_tracks += 1
                 if self.zero_duration_tracks >= len(self.playlist):
-                    self.error_message = "No tracks with a readable duration were found."
+                    self.error_message = (
+                        "No tracks with a readable duration were found."
+                    )
                     return
 
                 self._select_next_song()
@@ -136,11 +139,11 @@ class Player:
 
                 if key == CONTROL_C:
                     raise KeyboardInterrupt
-                if key == PAUSE_KEY:
+                if key == PAUSE_KEY or key == SPACE_KEY:
                     self._toggle_pause()
-                elif key == SKIP_FORWARD_KEY:
+                elif key == SKIP_FORWARD_KEY or key == RIGHT_ARROW:
                     self._skip_forward()
-                elif key == SKIP_BACKWARD_KEY:
+                elif key == SKIP_BACKWARD_KEY or key == LEFT_ARROW:
                     self._skip_backward()
                 elif key in (NEXT_SONG_KEY, PREVIOUS_SONG_KEY, QUIT_KEY):
                     return key
