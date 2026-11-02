@@ -112,9 +112,9 @@ sonic -f ~/Music --loop
 
 | Key | Action |
 | --- | --- |
-| `k` | Pause or resume |
-| `j` | Seek backward 10 seconds |
-| `l` | Seek forward 10 seconds |
+| `k`, `Space` | Pause or resume |
+| `j`, `←` | Seek backward 10 seconds |
+| `l`, `→` | Seek forward 10 seconds |
 | `n` | Next song |
 | `p` | Previous song |
 | `q` | Quit |
