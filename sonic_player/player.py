@@ -4,6 +4,7 @@ import asyncio
 import os
 import signal
 import sys
+import curses
 
 from .input import CONTROL_C, LEFT_ARROW, RIGHT_ARROW, KeyReader
 from .media import MediaBackend
@@ -37,7 +38,7 @@ class Player:
         self.error_message = None
         self.clock = PlaybackClock()
         self.media = MediaBackend()
-        self.terminal = TerminalUI()
+        # self.terminal = TerminalUI()  # Look into this
 
     def run(self):
         handled_signals = [
@@ -54,8 +55,7 @@ class Player:
         interrupted = False
 
         try:
-            self.terminal.enter()
-            asyncio.run(self._run_playlist())
+            curses.wrapper(self._run_with_curses)
         except KeyboardInterrupt:
             interrupted = True
         finally:
@@ -64,11 +64,11 @@ class Player:
             try:
                 self.media.stop()
             finally:
-                try:
-                    self.terminal.leave()
-                finally:
-                    for signum, handler in previous_handlers.items():
-                        signal.signal(signum, handler)
+                # try:
+                #     self.terminal.leave()
+                # finally:
+                for signum, handler in previous_handlers.items():
+                    signal.signal(signum, handler)
 
         if interrupted:
             print("\nInterrupted. Exiting...")
@@ -78,6 +78,15 @@ class Player:
             print()
 
         return 0
+
+    def _run_with_curses(self, screen):
+        try:
+            curses.curs_set(0)  # Hides cursor
+        except curses.error:
+            pass
+
+        self.terminal = TerminalUI(screen)
+        asyncio.run(self._run_playlist())
 
     @staticmethod
     def _handle_interrupt(signum, frame):
