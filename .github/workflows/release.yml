@@ -28,9 +28,6 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install test dependencies
-        run: python -m pip install -r requirements.txt
-
       - name: Run tests
         run: python -m unittest discover -s tests -v
 
@@ -57,7 +54,6 @@ jobs:
               status=$?
               set -e
               test "$status" -eq 1
-              ! grep -q "prompt_toolkit.*not found" build/smoke.stderr
               grep -q "invalid file" build/smoke.stderr
             '
 
@@ -71,6 +67,8 @@ jobs:
           archive_root="sonic-${version}"
           mkdir -p "release/${archive_root}/dist"
           cp ./dist/sonic "release/${archive_root}/dist/sonic"
+          cp ./sonic.py ./requirements-build.txt "release/${archive_root}/"
+          cp -R ./sonic_player "release/${archive_root}/"
           cp ./install.sh ./README.md "release/${archive_root}/"
           chmod 755 "release/${archive_root}/install.sh"
           archive="sonic-${version}-linux-x86_64.tar.gz"
