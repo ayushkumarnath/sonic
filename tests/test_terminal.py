@@ -1,15 +1,39 @@
-import io
 import unittest
-from unittest.mock import patch
 
 from sonic_player.models import PlaybackSnapshot
 from sonic_player.settings import (
-    EXIT_TERM_ALT_BUF,
+    LOOP_ICON,
+    PAUSE_ICON,
+    PLAY_ICON,
     PROGRESS_BAR_LEN,
     PROGRESS_EMPTY_BLOCK_ICON,
     PROGRESS_FILLED_BLOCK_ICON,
 )
 from sonic_player.terminal import TerminalUI
+
+
+class FakeScreen:
+    def __init__(self):
+        self.cursor = (0, 0)
+        self.writes = []
+        self.cleared_lines = []
+        self.refresh_count = 0
+
+    def addstr(self, y, x, text):
+        self.writes.append((y, x, text))
+        self.cursor = (y, x + len(text))
+
+    def getyx(self):
+        return self.cursor
+
+    def move(self, y, x):
+        self.cursor = (y, x)
+
+    def clrtoeol(self):
+        self.cleared_lines.append(self.cursor)
+
+    def refresh(self):
+        self.refresh_count += 1
 
 
 def snapshot(position=0, duration=100_000, **overrides):
@@ -27,54 +51,59 @@ def snapshot(position=0, duration=100_000, **overrides):
 
 
 class TerminalUITests(unittest.TestCase):
-    def test_enter_and_leave_restore_terminal_modes(self):
-        ui = TerminalUI()
-        output = io.StringIO()
-        with patch("sonic_player.terminal.sys.stdout", output):
-            ui.enter()
-            ui.leave()
-        self.assertIn(EXIT_TERM_ALT_BUF, output.getvalue())
-        self.assertFalse(ui._owned)
-        self.assertFalse(ui._cursor_hidden)
+    def test_render_draws_title_controls_progress_and_timer(self):
+        screen = FakeScreen()
+        ui = TerminalUI(screen)
 
-    def test_leave_is_safe_before_enter_and_idempotent_after(self):
-        ui = TerminalUI()
-        output = io.StringIO()
-        with patch("sonic_player.terminal.sys.stdout", output):
-            ui.leave()
-            ui.enter()
-            ui.leave()
-            ui.leave()
-        self.assertEqual(output.getvalue().count(EXIT_TERM_ALT_BUF), 1)
+        ui.render(snapshot(position=50_000, loop_enabled=True))
 
-    def test_render_outputs_title_controls_and_progress(self):
-        ui = TerminalUI()
-        output = io.StringIO()
-        with patch("sonic_player.terminal.sys.stdout", output):
-            ui.render(snapshot(position=50_000, loop_enabled=True))
-        rendered = output.getvalue()
-        self.assertIn("[Now playing]: song.mp3", rendered)
-        self.assertIn("00:00:50 / 00:01:40", rendered)
-        self.assertIn(PROGRESS_FILLED_BLOCK_ICON * (PROGRESS_BAR_LEN // 2), rendered)
-        self.assertIn(PROGRESS_EMPTY_BLOCK_ICON * (PROGRESS_BAR_LEN // 2), rendered)
+        writes = {(y, x): body for y, x, body in screen.writes}
+        self.assertEqual(writes[(0, 0)], "[Now playing]: song.mp3")
+        self.assertEqual(writes[(2, 0)], PAUSE_ICON)
+        self.assertEqual(writes[(2, 3)], LOOP_ICON)
+        progress = writes[(2, 6)]
+        self.assertEqual(progress.count(PROGRESS_FILLED_BLOCK_ICON), PROGRESS_BAR_LEN // 2)
+        self.assertEqual(progress.count(PROGRESS_EMPTY_BLOCK_ICON), PROGRESS_BAR_LEN // 2)
+        self.assertEqual(writes[(2, 39)], "00:00:50 / 00:01:40")
+        self.assertEqual(screen.cleared_lines[-1], (2, 38))
+        self.assertEqual(screen.refresh_count, 1)
 
     def test_progress_is_clamped_to_bar_for_positions_outside_duration(self):
         filled = TerminalUI._render_progress(snapshot(position=120_000))
         before_start = TerminalUI._render_progress(snapshot(position=-1_000))
-        self.assertIn(PROGRESS_FILLED_BLOCK_ICON * PROGRESS_BAR_LEN, filled)
-        self.assertNotIn(PROGRESS_EMPTY_BLOCK_ICON, filled)
-        self.assertIn(PROGRESS_EMPTY_BLOCK_ICON * PROGRESS_BAR_LEN, before_start)
-        self.assertNotIn(PROGRESS_FILLED_BLOCK_ICON, before_start)
+        self.assertEqual(filled, f"[{PROGRESS_FILLED_BLOCK_ICON * PROGRESS_BAR_LEN}]")
+        self.assertEqual(before_start, f"[{PROGRESS_EMPTY_BLOCK_ICON * PROGRESS_BAR_LEN}]")
 
     def test_long_title_scrolls_and_short_title_does_not(self):
-        ui = TerminalUI()
+        ui = TerminalUI(FakeScreen())
         long_title = "x" * 80
+
         first = ui._render_title(long_title)
         second = ui._render_title(long_title)
         self.assertIn("...", first)
         self.assertNotEqual(first, second)
+
         ui._render_title("short.mp3")
         self.assertEqual(ui._scroll_title, "short.mp3")
+
+    def test_paused_icon_and_progress_update_on_refresh_tick(self):
+        screen = FakeScreen()
+        ui = TerminalUI(screen)
+
+        ui.render(
+            snapshot(
+                position=25_000,
+                paused=True,
+                first_render=False,
+                render_tick=10,
+            )
+        )
+
+        writes = {(y, x): body for y, x, body in screen.writes}
+        self.assertEqual(writes[(2, 0)], PLAY_ICON)
+        self.assertIn((2, 3), writes)
+        self.assertEqual(writes[(2, 36)], "00:00:25 / 00:01:40")
+        self.assertEqual(writes[(0, 0)], "[Now playing]: song.mp3")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,11 @@
 """Playback orchestration and mutable player state."""
 
-import asyncio
 import os
 import signal
 import sys
 import curses
+from curses.ascii import ctrl
 
-from .input import CONTROL_C, LEFT_ARROW, RIGHT_ARROW, KeyReader
 from .media import MediaBackend
 from .models import PlaybackSnapshot, PlayerOptions
 from .settings import (
@@ -38,7 +37,6 @@ class Player:
         self.error_message = None
         self.clock = PlaybackClock()
         self.media = MediaBackend()
-        # self.terminal = TerminalUI()  # Look into this
 
     def run(self):
         handled_signals = [
@@ -64,9 +62,6 @@ class Player:
             try:
                 self.media.stop()
             finally:
-                # try:
-                #     self.terminal.leave()
-                # finally:
                 for signum, handler in previous_handlers.items():
                     signal.signal(signum, handler)
 
@@ -80,19 +75,24 @@ class Player:
         return 0
 
     def _run_with_curses(self, screen):
+        self._screen = screen
+
         try:
             curses.curs_set(0)  # Hides cursor
         except curses.error:
             pass
 
+        self._screen.keypad(True)  # Enables detection of arrow keys
+        self._screen.timeout(100)  # Waits for 0.1s for user input
+
         self.terminal = TerminalUI(screen)
-        asyncio.run(self._run_playlist())
+        self._run_playlist()
 
     @staticmethod
     def _handle_interrupt(signum, frame):
         raise KeyboardInterrupt
 
-    async def _run_playlist(self):
+    def _run_playlist(self):
         while 0 <= self.song_index < len(self.playlist):
             self.song = self.playlist[self.song_index]
             self.song_title = os.path.basename(self.song)
@@ -110,18 +110,18 @@ class Player:
                 continue
 
             self.zero_duration_tracks = 0
-            key = await self._play_current_track()
+            key = self._play_current_track()
 
-            if key == QUIT_KEY:
+            if key == ord(QUIT_KEY):
                 return
-            elif key == NEXT_SONG_KEY:
+            elif key == ord(NEXT_SONG_KEY):
                 self._select_next_song()
-            elif key == PREVIOUS_SONG_KEY:
+            elif key == ord(PREVIOUS_SONG_KEY):
                 self._select_previous_song()
             else:
                 self._select_next_song()
 
-    async def _play_current_track(self):
+    def _play_current_track(self):
         self.paused = False
         self.clock.reset()
         self.render_tick = 0
@@ -129,37 +129,36 @@ class Player:
 
         self.media.start(self.song)
         self.clock.start_segment()
-        key = await self._handle_playback_input()
+        key = self._handle_playback_input()
         self.media.finish()
         return key
 
-    async def _handle_playback_input(self):
-        with KeyReader() as key_reader:
-            while self.media.is_running():
-                key = await key_reader.read_key(0.1)
-                self.render_tick += 1
+    def _handle_playback_input(self):
+        while self.media.is_running():
+            key = self._screen.getch()
+            self.render_tick += 1
 
-                if self.render_tick == 10 and not self.paused:
-                    self.clock.commit()
-                    self.clock.start_segment()
+            if self.render_tick == 10 and not self.paused:
+                self.clock.commit()
+                self.clock.start_segment()
 
-                if self.render_tick > 10:
-                    self.render_tick %= 10
+            if self.render_tick > 10:
+                self.render_tick %= 10
 
-                if key == CONTROL_C:
-                    raise KeyboardInterrupt
-                if key == PAUSE_KEY or key == SPACE_KEY:
-                    self._toggle_pause()
-                elif key == SKIP_FORWARD_KEY or key == RIGHT_ARROW:
-                    self._skip_forward()
-                elif key == SKIP_BACKWARD_KEY or key == LEFT_ARROW:
-                    self._skip_backward()
-                elif key in (NEXT_SONG_KEY, PREVIOUS_SONG_KEY, QUIT_KEY):
-                    return key
+            if key == ctrl("C"):
+                raise KeyboardInterrupt
+            if key == ord(PAUSE_KEY) or key == ord(SPACE_KEY):
+                self._toggle_pause()
+            elif key == ord(SKIP_FORWARD_KEY) or key == curses.KEY_RIGHT:
+                self._skip_forward()
+            elif key == ord(SKIP_BACKWARD_KEY) or key == curses.KEY_LEFT:
+                self._skip_backward()
+            elif key in (ord(NEXT_SONG_KEY), ord(PREVIOUS_SONG_KEY), ord(QUIT_KEY)):
+                return key
 
-                self.terminal.render(self._snapshot())
-                if self.first_render:
-                    self.first_render = False
+            self.terminal.render(self._snapshot())
+            if self.first_render:
+                self.first_render = False
 
         return ""
 

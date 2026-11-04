@@ -1,7 +1,6 @@
 """Command-line parsing, validation, and application startup."""
 
 import fcntl
-import importlib.util
 import os
 import shutil
 import sys
@@ -127,10 +126,6 @@ def parse_arguments(args):
 
 def check_dependencies():
     missing = [name for name in ("ffplay", "ffprobe") if shutil.which(name) is None]
-    if importlib.util.find_spec("prompt_toolkit") is None:
-        missing.append(
-            "Python package 'prompt_toolkit' (install with: python -m pip install prompt_toolkit)"
-        )
 
     if missing:
         for dependency in missing:

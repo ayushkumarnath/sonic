@@ -22,7 +22,7 @@ SONIC is a terminal music player for Linux. It plays MP3 files and playlists wit
 
 - A Nerd Font is recommended for the playback icons.
 
-The packaged executable includes Python and `prompt_toolkit`. You do not need to install Python to use a release binary. FFmpeg remains an external dependency.
+The packaged executable includes Python. Curses is provided by Python; FFmpeg remains an external dependency.
 
 ## Install a release
 
@@ -44,19 +44,18 @@ sonic --version
 
 ## Run from source
 
-Install Python 3, FFmpeg, and the Python dependency, then run the entry point:
+Install Python 3 with curses support and FFmpeg, then run the entry point:
 
 ```shell
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python sonic.py --help
+python3 sonic.py --help
 ```
 
 ## Build a standalone executable
 
-Install the pinned build dependencies in the virtual environment and build the one-file Linux executable:
+Install the pinned build dependencies in a virtual environment and build the one-file Linux executable:
 
 ```shell
+python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-build.txt
 .venv/bin/python -m PyInstaller --clean --noconfirm --onefile --name sonic --specpath build --workpath build/work --distpath dist sonic.py
 ```
