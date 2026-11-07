@@ -10,6 +10,7 @@ SONIC is a terminal music player for Linux. It plays MP3 files and playlists wit
 - Move to the next or previous song
 - Loop a song or playlist
 - Display playback progress and elapsed time
+- Show an animated spectrum visualizer
 
 ## Requirements
 
