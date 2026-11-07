@@ -145,8 +145,13 @@ class Player:
             if self.render_tick > 10:
                 self.render_tick %= 10
 
+            # Detect window resize event
+            if key == curses.KEY_RESIZE:
+                self._screen.clear()
+
             if key == ctrl("C"):
                 raise KeyboardInterrupt
+
             if key == ord(PAUSE_KEY) or key == ord(SPACE_KEY):
                 self._toggle_pause()
             elif key == ord(SKIP_FORWARD_KEY) or key == curses.KEY_RIGHT:

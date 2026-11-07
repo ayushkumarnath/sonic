@@ -1,6 +1,7 @@
 """Terminal ownership and playback UI rendering."""
 
-import sys
+import random
+import unicodedata
 
 from .models import PlaybackSnapshot
 from .settings import (
@@ -22,53 +23,158 @@ class TerminalUI:
         self._source_title = None
         self._scroll_title = ""
         self._screen = screen
+        self._spectrum_height = 10
+        self._spectrum_width = 30
+        self._spectrum_elem_y = 12
+        self._title_elem_y = 2
+        self._progress_elem_y = 1
+        self._small_screen_visible = False
+
+    def get_win_dimensions(self):
+        return self._screen.getmaxyx()
+
+    def _get_ui_height(self):
+        return self._spectrum_elem_y + self._title_elem_y + self._progress_elem_y
+
+    def _get_ui_width(self):
+        return max(self._spectrum_width, self._title_width, self._media_ctrl_bar_width)
+
+    @staticmethod
+    def _display_width(text):
+        width = 0
+        for char in text:
+            category = unicodedata.category(char)
+            if category.startswith("M") or category == "Cf":
+                continue
+            width += 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
+        return width
+
+    @classmethod
+    def _truncate_to_display_width(cls, text, max_width):
+        result = []
+        width = 0
+        for char in text:
+            char_width = cls._display_width(char)
+            if width + char_width > max_width:
+                break
+            result.append(char)
+            width += char_width
+        return "".join(result)
 
     def render(self, snapshot: PlaybackSnapshot):
-        line_no = 0
+        self._media_ctrl_bar = f"{PLAY_ICON if snapshot.paused else PAUSE_ICON} {' ' + LOOP_ICON + ' ' if snapshot.loop_enabled else ''} {self._render_progress(snapshot)} {self._render_progress_timer(snapshot)}"
+        self._media_ctrl_bar_width = self._display_width(self._media_ctrl_bar)
+        self._title_width = self._display_width("[Now playing]: ") + MAX_SONG_TITLE_LEN
+        self._height, self._width = self.get_win_dimensions()
+        self._origin_y, self._origin_x = int(self._height / 2), int(self._width / 2)
+        self._box_y, self._box_x = self._get_ui_height(), self._get_ui_width()
 
-        if snapshot.first_render or snapshot.render_tick in (5, 10):
+        # Display this text if screen dimensions are too small to display the UI
+        if self._height <= self._box_y or self._width <= self._box_x:
+            if not self._small_screen_visible:
+                self._screen.clear()
+                self._small_screen_visible = True
+            novisual_text = ""
+            if self._height <= self._box_y:
+                novisual_text = "Screen height is too small"
+            elif self._width <= self._box_x:
+                novisual_text = "Screen width is too small"
+            novisual_text = self._truncate_to_display_width(novisual_text, self._width)
             self._screen.addstr(
-                line_no, 0, f"{self._render_title(snapshot.song_title)}"
+                self._origin_y,
+                max(0, self._origin_x - self._display_width(novisual_text) // 2),
+                novisual_text,
             )
+            self._screen.refresh()
+            return
 
-        line_no += 2
+        if self._small_screen_visible:
+            self._screen.clear()
+            self._small_screen_visible = False
 
-        self._screen.addstr(
-            line_no, 0, f"{PLAY_ICON if snapshot.paused else PAUSE_ICON}"
-        )
+        line = self._origin_y - int(self._box_y / 2)
 
-        y, x = self._screen.getyx()
+        # Render spectrum visualizer
+        if snapshot.first_render or snapshot.render_tick in (3, 6, 9):
+            self._render_spectrum_visualizer(line)
+        line += self._spectrum_elem_y
 
-        if snapshot.loop_enabled:
-            self._screen.addstr(y, x + 2, f"{LOOP_ICON}")
-            y, x = self._screen.getyx()
+        # Render title string
+        if snapshot.first_render or snapshot.render_tick in (5, 10):
+            self._render_title(line, snapshot.song_title)
+        line += self._title_elem_y
 
-        if snapshot.first_render or snapshot.render_tick == 10:
-            self._screen.addstr(y, x + 2, f"{self._render_progress(snapshot)}")
-            y, x = self._screen.getyx()
-            self._screen.clrtoeol()
-            self._screen.addstr(y, x + 1, f"{self._render_progress_timer(snapshot)}")
+        # Render media control bar
+        self._render_media_ctrl_bar(line)
+
         self._screen.refresh()
 
-    def _render_title(self, title):
+    def _generate_spectrum_matrix(self):
+        visualizer_matrix = [
+            [" " for _ in range(self._spectrum_width)]
+            for _ in range(self._spectrum_height + 1)
+        ]
+
+        for col in range(self._spectrum_width):
+            height = random.randint(1, self._spectrum_height)
+            for row in range(self._spectrum_height, -1, -1):
+                if row == self._spectrum_height:
+                    visualizer_matrix[row][col] = "-"
+                elif row >= self._spectrum_height - height:
+                    visualizer_matrix[row][col] = "."
+                elif row < self._spectrum_height - height:
+                    visualizer_matrix[row][col] = " "
+
+        return visualizer_matrix
+
+    def _render_spectrum_visualizer(self, line):
+        spectr_matrix = self._generate_spectrum_matrix()
+        for row, _ in enumerate(spectr_matrix):
+            for col, col_el in enumerate(spectr_matrix[row]):
+                self._screen.addstr(
+                    line + row,
+                    self._origin_x - int(self._spectrum_width / 2) + col,
+                    col_el,
+                )
+
+    def _generate_title(self, title):
         if title != self._source_title:
             self._source_title = title
             self._scroll_title = (
-                f"  {title}  " if len(title) > MAX_SONG_TITLE_LEN else title
+                f"  {title}  "
+                if self._display_width(title) > MAX_SONG_TITLE_LEN
+                else title
             )
 
         rendered_title = self._scroll_title
-        if len(self._scroll_title) > MAX_SONG_TITLE_LEN:
+        if self._display_width(self._scroll_title) > MAX_SONG_TITLE_LEN:
             self._scroll_title = self._scroll_title[1:] + self._scroll_title[:1]
-            rendered_title = f"{self._scroll_title[: MAX_SONG_TITLE_LEN - 3]}..."
+            visible = self._truncate_to_display_width(
+                self._scroll_title, MAX_SONG_TITLE_LEN - 3
+            )
+            rendered_title = f"{visible}..."
 
-        self._screen.move(0, 0)
+        title_elem = f"[Now playing]: {rendered_title}"
+
+        return title_elem
+
+    def _render_title(self, line, song_title):
+        self._screen.move(
+            self._origin_y - int(self._box_y / 2) + self._spectrum_elem_y,
+            self._origin_x - int(self._box_x / 2),
+        )
         self._screen.clrtoeol()
-        return f"[Now playing]: {rendered_title}"
 
-    @staticmethod
-    def _render_progress(snapshot):
-        ratio = snapshot.playback_position_ms / snapshot.media_duration_ms
+        title_text = self._generate_title(song_title)
+        title_x = self._origin_x - self._display_width(title_text) // 2
+        self._screen.addstr(line, title_x, title_text)
+
+    def _render_progress(self, snapshot):
+        ratio = (
+            snapshot.playback_position_ms / snapshot.media_duration_ms
+            if snapshot.media_duration_ms > 0
+            else 0
+        )
         filled_blocks = min(PROGRESS_BAR_LEN, max(0, int(ratio * PROGRESS_BAR_LEN)))
 
         blocks = "".join(
@@ -77,12 +183,21 @@ class TerminalUI:
             else PROGRESS_EMPTY_BLOCK_ICON
             for index in range(PROGRESS_BAR_LEN)
         )
-        return f"[{blocks}]"
 
-    @staticmethod
-    def _render_progress_timer(snapshot):
+        progress_elem = f"[{blocks}]"
+        return progress_elem
+
+    def _render_progress_timer(self, snapshot):
         position_ms = snapshot.playback_position_ms
-        return (
+        progress_timer_elem = (
             f"{format_ms_to_clock(position_ms)} / "
             f"{format_ms_to_clock(snapshot.media_duration_ms)}"
+        )
+        return progress_timer_elem
+
+    def _render_media_ctrl_bar(self, line):
+        self._screen.addstr(
+            line,
+            self._origin_x - int(self._media_ctrl_bar_width / 2),
+            self._media_ctrl_bar,
         )
