@@ -86,8 +86,3 @@ class TerminalUI:
             f"{format_ms_to_clock(position_ms)} / "
             f"{format_ms_to_clock(snapshot.media_duration_ms)}"
         )
-
-    @staticmethod
-    def _write(content):
-        sys.stdout.write(content)
-        sys.stdout.flush()
