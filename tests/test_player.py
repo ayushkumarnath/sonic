@@ -123,14 +123,15 @@ class PlaybackControlTests(unittest.TestCase):
         player.media.start.assert_called_once_with("", "10.000")
         player.terminal.render.assert_called_once()
 
-    def test_handle_playback_input_clears_and_renders_once_after_resize(self):
+    def test_handle_playback_input_routes_resize_event_and_renders_once(self):
         player = self.make_player()
         player._screen = Mock()
         player._screen.getch.return_value = curses.KEY_RESIZE
 
         player._handle_playback_input()
 
-        player._screen.clear.assert_called_once_with()
+        player.terminal.event_win_resize.assert_called_once_with()
+        player._screen.clear.assert_not_called()
         player.terminal.render.assert_called_once()
 
     def test_toggle_pause_commits_clock_and_resumes_from_saved_position(self):

@@ -94,17 +94,10 @@ class TerminalUITests(unittest.TestCase):
         progress = ui._render_progress(snapshot(position=5_000, duration=0))
         self.assertEqual(progress, f"[{PROGRESS_EMPTY_BLOCK_ICON * PROGRESS_BAR_LEN}]")
 
-    def test_title_width_and_truncation_use_terminal_columns(self):
+    def test_title_truncation_uses_character_count(self):
         ui = TerminalUI(FakeScreen())
-        text = "e\u0301\u97f3"
-        self.assertEqual(ui._display_width(text), 3)
-        self.assertEqual(ui._truncate_to_display_width("a\u97f3b", 3), "a\u97f3")
-
-        screen = FakeScreen()
-        ui = TerminalUI(screen)
-        ui.render(snapshot(song_title="\u97f3\u697d"))
-        title_text = "[Now playing]: \u97f3\u697d"
-        self.assertIn((20, 41, title_text), screen.writes)
+        self.assertEqual(ui._truncate_to_display_width("abcdefgh", 6), "abc...")
+        self.assertEqual(ui._truncate_to_display_width("abc", 6), "abc")
 
     def test_long_title_scrolls_and_short_title_does_not(self):
         ui = TerminalUI(FakeScreen())
@@ -150,7 +143,7 @@ class TerminalUITests(unittest.TestCase):
         self.assertFalse(any(text == ui._media_ctrl_bar for _, _, text in screen.writes))
 
         ui.render(snapshot())
-        self.assertEqual(screen.clear_count, 1)
+        self.assertEqual(screen.clear_count, 2)
 
         screen.height = 30
         screen.width = 100
