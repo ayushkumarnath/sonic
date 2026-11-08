@@ -26,6 +26,7 @@ class TerminalUI:
         self._spectrum_height = 10
         self._spectrum_width = 30
         self._spectrum_elem_y = 12
+        self._title_width = self._display_width("[Now playing]: ") + MAX_SONG_TITLE_LEN
         self._title_elem_y = 2
         self._progress_elem_y = 1
 
@@ -58,7 +59,6 @@ class TerminalUI:
     def render(self, snapshot: PlaybackSnapshot):
         self._media_ctrl_bar = f"{PLAY_ICON if snapshot.paused else PAUSE_ICON} {' ' + LOOP_ICON + ' ' if snapshot.loop_enabled else ''} {self._render_progress(snapshot)} {self._render_progress_timer(snapshot)}"
         self._media_ctrl_bar_width = self._display_width(self._media_ctrl_bar)
-        self._title_width = self._display_width("[Now playing]: ") + MAX_SONG_TITLE_LEN
         self._height, self._width = self.get_win_dimensions()
         self._origin_y, self._origin_x = int(self._height / 2), int(self._width / 2)
         self._box_y, self._box_x = self._get_ui_height(), self._get_ui_width()
@@ -138,10 +138,7 @@ class TerminalUI:
         rendered_title = self._scroll_title
         if self._display_width(self._scroll_title) > MAX_SONG_TITLE_LEN:
             self._scroll_title = self._scroll_title[1:] + self._scroll_title[:1]
-            visible = self._truncate_to_display_width(
-                self._scroll_title, MAX_SONG_TITLE_LEN - 3
-            )
-            rendered_title = f"{visible}..."
+            rendered_title = f"{self._scroll_title[: MAX_SONG_TITLE_LEN - 3]}..."
 
         title_elem = f"[Now playing]: {rendered_title}"
 
