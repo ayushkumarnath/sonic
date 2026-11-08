@@ -147,7 +147,7 @@ class Player:
 
             # Detect window resize event
             if key == curses.KEY_RESIZE:
-                self._screen.clear()
+                self.terminal.event_win_resize()
 
             if key == ctrl("C"):
                 raise KeyboardInterrupt

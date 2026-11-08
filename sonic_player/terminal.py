@@ -28,7 +28,6 @@ class TerminalUI:
         self._spectrum_elem_y = 12
         self._title_elem_y = 2
         self._progress_elem_y = 1
-        self._small_screen_visible = False
 
     def get_win_dimensions(self):
         return self._screen.getmaxyx()
@@ -51,15 +50,10 @@ class TerminalUI:
 
     @classmethod
     def _truncate_to_display_width(cls, text, max_width):
-        result = []
-        width = 0
-        for char in text:
-            char_width = cls._display_width(char)
-            if width + char_width > max_width:
-                break
-            result.append(char)
-            width += char_width
-        return "".join(result)
+        return text[: max_width - 3] + "..." if len(text) > max_width else text
+
+    def event_win_resize(self):
+        self._screen.clear()
 
     def render(self, snapshot: PlaybackSnapshot):
         self._media_ctrl_bar = f"{PLAY_ICON if snapshot.paused else PAUSE_ICON} {' ' + LOOP_ICON + ' ' if snapshot.loop_enabled else ''} {self._render_progress(snapshot)} {self._render_progress_timer(snapshot)}"
@@ -69,11 +63,10 @@ class TerminalUI:
         self._origin_y, self._origin_x = int(self._height / 2), int(self._width / 2)
         self._box_y, self._box_x = self._get_ui_height(), self._get_ui_width()
 
-        # Display this text if screen dimensions are too small to display the UI
+        # Handle window resize event by displaying filler text to let the user know
+        # if it has become impossible to render the UI with such screen dimensions
         if self._height <= self._box_y or self._width <= self._box_x:
-            if not self._small_screen_visible:
-                self._screen.clear()
-                self._small_screen_visible = True
+            self._screen.clear()
             novisual_text = ""
             if self._height <= self._box_y:
                 novisual_text = "Screen height is too small"
@@ -87,10 +80,6 @@ class TerminalUI:
             )
             self._screen.refresh()
             return
-
-        if self._small_screen_visible:
-            self._screen.clear()
-            self._small_screen_visible = False
 
         line = self._origin_y - int(self._box_y / 2)
 
