@@ -84,10 +84,8 @@ class TerminalUI:
         line = self._origin_y - int(self._box_y / 2)
 
         # Render spectrum visualizer
-        if (
-            not snapshot.paused
-            and snapshot.first_render
-            or snapshot.render_tick in (3, 6, 9)
+        if not snapshot.paused and (
+            snapshot.first_render or snapshot.render_tick in (3, 6, 9)
         ):
             self._render_spectrum_visualizer(line)
         line += self._spectrum_elem_y
