@@ -88,9 +88,11 @@ class ValidationAndPlaylistTests(unittest.TestCase):
 
     def test_main_version_does_not_acquire_lock(self):
         with patch("src.cli.acquire_instance_lock") as lock:
-            with contextlib.redirect_stdout(io.StringIO()):
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
                 self.assertEqual(main(["--version"]), 0)
             lock.assert_not_called()
+        self.assertEqual(stdout.getvalue(), "SONIC v2.4.0\n")
 
     def test_main_reports_cli_error_and_returns_one(self):
         stderr = io.StringIO()
