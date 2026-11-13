@@ -1,7 +1,7 @@
 import unittest
 
-from sonic_player.models import PlaybackSnapshot
-from sonic_player.settings import (
+from src.models import PlaybackSnapshot
+from src.settings import (
     LOOP_ICON,
     PAUSE_ICON,
     PLAY_ICON,
@@ -9,7 +9,7 @@ from sonic_player.settings import (
     PROGRESS_EMPTY_BLOCK_ICON,
     PROGRESS_FILLED_BLOCK_ICON,
 )
-from sonic_player.terminal import TerminalUI
+from src.terminal import TerminalUI
 
 
 class FakeScreen:
@@ -110,6 +110,20 @@ class TerminalUITests(unittest.TestCase):
 
         ui._generate_title("short.mp3")
         self.assertEqual(ui._scroll_title, "short.mp3")
+
+    def test_paused_render_ticks_do_not_draw_spectrum(self):
+        for render_tick in (3, 6, 9):
+            with self.subTest(render_tick=render_tick):
+                ui = TerminalUI(FakeScreen())
+                ui._render_spectrum_visualizer = lambda line: self.fail("spectrum rendered while paused")
+
+                ui.render(
+                    snapshot(
+                        paused=True,
+                        first_render=False,
+                        render_tick=render_tick,
+                    )
+                )
 
     def test_paused_control_bar_updates_on_refresh_tick(self):
         screen = FakeScreen()

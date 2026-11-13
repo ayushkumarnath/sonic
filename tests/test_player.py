@@ -3,9 +3,9 @@ import signal
 import unittest
 from unittest.mock import Mock, patch
 
-from sonic_player.models import PlayerOptions
-from sonic_player.player import Player
-from sonic_player.settings import NEXT_SONG_KEY, PREVIOUS_SONG_KEY, QUIT_KEY
+from src.models import PlayerOptions
+from src.player import Player
+from src.settings import NEXT_SONG_KEY, PREVIOUS_SONG_KEY, QUIT_KEY
 
 
 class PlaylistFlowTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class PlaylistFlowTests(unittest.TestCase):
         player.terminal = Mock()
         return player
 
-    @patch("sonic_player.player.MediaBackend.probe_duration_ms", return_value=1_000)
+    @patch("src.player.MediaBackend.probe_duration_ms", return_value=1_000)
     def test_next_and_previous_keys_select_expected_tracks(self, _probe):
         player = self.make_player(["one.mp3", "two.mp3", "three.mp3"])
         player._play_current_track = Mock(
@@ -26,7 +26,7 @@ class PlaylistFlowTests(unittest.TestCase):
         self.assertEqual(player.song_index, 0)
         self.assertEqual(player._play_current_track.call_count, 3)
 
-    @patch("sonic_player.player.MediaBackend.probe_duration_ms", return_value=1_000)
+    @patch("src.player.MediaBackend.probe_duration_ms", return_value=1_000)
     def test_non_looping_previous_from_first_track_exits_playlist(self, _probe):
         player = self.make_player(["one.mp3", "two.mp3"])
         player._play_current_track = Mock(return_value=ord(PREVIOUS_SONG_KEY))
@@ -34,7 +34,7 @@ class PlaylistFlowTests(unittest.TestCase):
         self.assertEqual(player.song_index, -1)
         self.assertEqual(player._play_current_track.call_count, 1)
 
-    @patch("sonic_player.player.MediaBackend.probe_duration_ms", return_value=1_000)
+    @patch("src.player.MediaBackend.probe_duration_ms", return_value=1_000)
     def test_looping_next_and_previous_wrap_indices(self, _probe):
         player = self.make_player(["one.mp3", "two.mp3"], loop=True)
         player.song_index = 1
@@ -43,7 +43,7 @@ class PlaylistFlowTests(unittest.TestCase):
         player._select_previous_song()
         self.assertEqual(player.song_index, 1)
 
-    @patch("sonic_player.player.MediaBackend.probe_duration_ms", side_effect=[0, 0, 1_000])
+    @patch("src.player.MediaBackend.probe_duration_ms", side_effect=[0, 0, 1_000])
     def test_skips_bad_duration_tracks_until_a_valid_track(self, _probe):
         player = self.make_player(["bad1.mp3", "bad2.mp3", "good.mp3"])
         player._play_current_track = Mock(return_value=ord(QUIT_KEY))
@@ -52,7 +52,7 @@ class PlaylistFlowTests(unittest.TestCase):
         self.assertEqual(player.zero_duration_tracks, 0)
         player._play_current_track.assert_called_once_with()
 
-    @patch("sonic_player.player.MediaBackend.probe_duration_ms", side_effect=[0, 0])
+    @patch("src.player.MediaBackend.probe_duration_ms", side_effect=[0, 0])
     def test_all_bad_duration_tracks_report_error_and_do_not_play(self, _probe):
         player = self.make_player(["bad1.mp3", "bad2.mp3"])
         player._play_current_track = Mock()
@@ -76,9 +76,9 @@ class PlayerShutdownTests(unittest.TestCase):
             installed_handlers[signal.SIGTERM](signal.SIGTERM, None)
 
         player.playlist = []
-        with patch("sonic_player.player.signal.getsignal", return_value=signal.SIG_DFL), patch(
-            "sonic_player.player.signal.signal", side_effect=set_handler
-        ), patch("sonic_player.player.curses.wrapper", side_effect=terminate_player):
+        with patch("src.player.signal.getsignal", return_value=signal.SIG_DFL), patch(
+            "src.player.signal.signal", side_effect=set_handler
+        ), patch("src.player.curses.wrapper", side_effect=terminate_player):
             self.assertEqual(player.run(), 0)
 
         player.media.stop.assert_called_once_with()

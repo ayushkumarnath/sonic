@@ -3,18 +3,18 @@ import subprocess
 import unittest
 from unittest.mock import Mock, patch
 
-from sonic_player.media import MediaBackend
+from src.media import MediaBackend
 
 
 class ProbeDurationTests(unittest.TestCase):
-    @patch("sonic_player.media.subprocess.run")
+    @patch("src.media.subprocess.run")
     def test_parses_valid_duration_to_milliseconds(self, run):
         run.return_value = Mock(returncode=0, stdout="123.456\n")
         self.assertEqual(MediaBackend.probe_duration_ms("song.mp3"), 123_456)
         self.assertEqual(run.call_args.kwargs["check"], False)
         self.assertTrue(run.call_args.kwargs["capture_output"])
 
-    @patch("sonic_player.media.subprocess.run")
+    @patch("src.media.subprocess.run")
     def test_returns_zero_for_probe_errors_and_invalid_values(self, run):
         cases = [
             Mock(returncode=1, stdout="42"),
@@ -33,7 +33,7 @@ class ProbeDurationTests(unittest.TestCase):
 
 
 class MediaLifecycleTests(unittest.TestCase):
-    @patch("sonic_player.media.subprocess.Popen")
+    @patch("src.media.subprocess.Popen")
     def test_start_builds_ffplay_command_with_optional_seek(self, popen):
         backend = MediaBackend()
         backend.start("song.mp3", "12.345")

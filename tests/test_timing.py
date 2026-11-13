@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from sonic_player.timing import (
+from src.timing import (
     PlaybackClock,
     format_ms_to_clock,
     format_ms_to_seconds,
@@ -11,13 +11,13 @@ from sonic_player.timing import (
 class PlaybackClockTests(unittest.TestCase):
     def test_position_advances_from_monotonic_clock(self):
         clock = PlaybackClock()
-        with patch("sonic_player.timing.time.monotonic", side_effect=[10.0, 12.345]):
+        with patch("src.timing.time.monotonic", side_effect=[10.0, 12.345]):
             clock.start_segment()
             self.assertEqual(clock.position_ms(), 2345)
 
     def test_commit_accumulates_segment_and_stops_running_segment(self):
         clock = PlaybackClock()
-        with patch("sonic_player.timing.time.monotonic", side_effect=[1.0, 3.5]):
+        with patch("src.timing.time.monotonic", side_effect=[1.0, 3.5]):
             clock.start_segment()
             clock.commit()
 
